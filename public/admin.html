@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeScope AI — 관리자</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e17;--bg2:#111827;--card:#1a2035;--input:#0d1321;
+  --border:#1e2a42;--accent:#3b82f6;--text:#e2e8f0;--text2:#94a3b8;--muted:#64748b;
+  --green:#22c55e;--red:#ef4444;--yellow:#eab308;--purple:#8b5cf6;
+  --mono:'JetBrains Mono',monospace;--sans:'Noto Sans KR',sans-serif;
+  --r:8px;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;padding:20px}
+h1{font-family:var(--mono);font-size:1.4rem;color:var(--accent);margin-bottom:8px}
+h1 span{color:var(--text)}
+.subtitle{color:var(--muted);font-size:.85rem;margin-bottom:24px}
+button{cursor:pointer;font-family:inherit;border:none;outline:none}
+input,select{font-family:inherit;outline:none}
+
+/* Login */
+#loginPanel{max-width:400px;margin:80px auto;text-align:center}
+#loginPanel h1{margin-bottom:20px}
+.login-input{width:100%;padding:12px;background:var(--input);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:1rem;margin-bottom:12px;text-align:center}
+.login-input:focus{border-color:var(--accent)}
+.login-btn{width:100%;padding:12px;background:var(--accent);color:#fff;font-weight:600;border-radius:var(--r);font-size:1rem}
+.login-btn:hover{background:#2563eb}
+.login-error{color:var(--red);font-size:.85rem;margin-top:8px}
+
+/* Admin panel */
+#adminPanel{display:none;max-width:900px;margin:0 auto}
+.section{margin-bottom:24px}
+.section-title{font-family:var(--mono);font-size:.85rem;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px}
+
+/* Create form */
+.create-form{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:.7rem;color:var(--muted);text-transform:uppercase;font-family:var(--mono);letter-spacing:.5px}
+.form-group input,.form-group select{padding:8px 12px;background:var(--input);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:.85rem;min-width:120px}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.create-btn{padding:8px 20px;background:var(--accent);color:#fff;font-weight:600;border-radius:var(--r);align-self:flex-end;font-size:.85rem;height:36px}
+.create-btn:hover{background:#2563eb}
+.create-msg{font-size:.85rem;margin-top:8px}
+
+/* Table */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{background:var(--bg2);color:var(--muted);text-align:left;padding:10px 12px;font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border)}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--card)}
+.code-text{font-family:var(--mono);font-weight:600;color:var(--accent);letter-spacing:1px}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.7rem;font-weight:600}
+.badge-free{background:rgba(100,116,139,.2);color:var(--text2)}
+.badge-standard{background:rgba(59,130,246,.15);color:var(--accent)}
+.badge-pro{background:rgba(139,92,246,.15);color:var(--purple)}
+.badge-active{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-inactive{background:rgba(239,68,68,.15);color:var(--red)}
+.action-btn{padding:4px 10px;border-radius:4px;font-size:.75rem;font-weight:500;margin-right:4px}
+.btn-toggle{background:var(--card);border:1px solid var(--border);color:var(--text2)}
+.btn-toggle:hover{border-color:var(--yellow);color:var(--yellow)}
+.btn-delete{background:var(--card);border:1px solid var(--border);color:var(--text2)}
+.btn-delete:hover{border-color:var(--red);color:var(--red)}
+.btn-back{display:inline-block;margin-bottom:16px;padding:6px 14px;background:var(--card);border:1px solid var(--border);color:var(--text2);border-radius:var(--r);font-size:.85rem;text-decoration:none}
+.btn-back:hover{border-color:var(--accent);color:var(--accent)}
+.edit-input{padding:4px 8px;background:var(--input);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:.8rem;width:110px}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="loginPanel">
+  <h1>Trade<span>Scope</span> Admin</h1>
+  <input type="password" class="login-input" id="adminPw" placeholder="관리자 비밀번호" autocomplete="off">
+  <button class="login-btn" onclick="adminLogin()">로그인</button>
+  <div class="login-error" id="loginError"></div>
+</div>
+
+<!-- Admin Panel -->
+<div id="adminPanel">
+  <a href="/" class="btn-back">← 메인으로</a>
+  <h1>Trade<span>Scope</span> Admin</h1>
+  <div class="subtitle">초대 코드 관리</div>
+
+  <div class="section">
+    <div class="section-title">새 코드 생성</div>
+    <div class="create-form">
+      <div class="form-group">
+        <label>코드</label>
+        <input type="text" id="newCode" placeholder="MY-CODE-123" style="text-transform:uppercase">
+      </div>
+      <div class="form-group">
+        <label>플랜</label>
+        <select id="newPlan">
+          <option value="free">무료 (5회/일)</option>
+          <option value="standard" selected>스탠다드 (20회/일)</option>
+          <option value="pro">프로 (무제한)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>만료일</label>
+        <input type="date" id="newExpiry" value="2026-12-31">
+      </div>
+      <div class="form-group">
+        <label>일일 한도</label>
+        <input type="number" id="newMaxDaily" placeholder="자동" min="-1" style="width:80px">
+      </div>
+      <button class="create-btn" onclick="createCode()">생성</button>
+    </div>
+    <div class="create-msg" id="createMsg"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">코드 목록</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>코드</th><th>플랜</th><th>일일한도</th><th>오늘 사용</th><th>만료일</th><th>상태</th><th>액션</th></tr>
+        </thead>
+        <tbody id="codesTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/.netlify/functions/invite';
+let adminPassword = '';
+
+document.getElementById('adminPw').addEventListener('keydown', e => { if (e.key === 'Enter') adminLogin(); });
+
+async function adminLogin() {
+  adminPassword = document.getElementById('adminPw').value;
+  if (!adminPassword) { document.getElementById('loginError').textContent = '비밀번호를 입력하세요'; return; }
+  try {
+    const res = await fetch(API, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action: 'admin_list', password: adminPassword })
+    });
+    const data = await res.json();
+    if (data.error) { document.getElementById('loginError').textContent = data.error; return; }
+    document.getElementById('loginPanel').style.display = 'none';
+    document.getElementById('adminPanel').style.display = 'block';
+    renderCodes(data.codes);
+  } catch(e) {
+    document.getElementById('loginError').textContent = '서버 연결 실패';
+  }
+}
+
+function renderCodes(codes) {
+  const tbody = document.getElementById('codesTable');
+  if (!codes || codes.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center">코드 없음</td></tr>'; return; }
+  tbody.innerHTML = codes.map(c => {
+    const planBadge = `<span class="badge badge-${c.plan}">${{free:'무료',standard:'스탠다드',pro:'프로'}[c.plan]||c.plan}</span>`;
+    const statusBadge = c.active ? '<span class="badge badge-active">활성</span>' : '<span class="badge badge-inactive">비활성</span>';
+    const maxText = c.maxDaily < 0 ? '∞' : c.maxDaily;
+    return `<tr>
+      <td class="code-text">${c.code}</td>
+      <td>${planBadge}</td>
+      <td>${maxText}</td>
+      <td>${c.usedToday}</td>
+      <td><input class="edit-input" type="date" value="${c.expiresAt}" onchange="updateExpiry('${c.code}',this.value)"></td>
+      <td>${statusBadge}</td>
+      <td>
+        <button class="action-btn btn-toggle" onclick="toggleCode('${c.code}',${!c.active})">${c.active?'비활성화':'활성화'}</button>
+        <button class="action-btn btn-delete" onclick="deleteCode('${c.code}')">삭제</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function createCode() {
+  const code = document.getElementById('newCode').value.trim();
+  const plan = document.getElementById('newPlan').value;
+  const expiresAt = document.getElementById('newExpiry').value;
+  const maxDailyStr = document.getElementById('newMaxDaily').value;
+  if (!code) { document.getElementById('createMsg').textContent = '코드를 입력하세요'; return; }
+
+  const payload = { action: 'admin_create', password: adminPassword, code, plan, expiresAt };
+  if (maxDailyStr !== '') payload.maxDaily = parseInt(maxDailyStr);
+
+  try {
+    const res = await fetch(API, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (data.error) { document.getElementById('createMsg').innerHTML = `<span style="color:var(--red)">${data.error}</span>`; return; }
+    document.getElementById('createMsg').innerHTML = `<span style="color:var(--green)">생성 완료: ${code.toUpperCase()}</span>`;
+    document.getElementById('newCode').value = '';
+    refreshList();
+  } catch(e) { document.getElementById('createMsg').innerHTML = '<span style="color:var(--red)">서버 오류</span>'; }
+}
+
+async function deleteCode(code) {
+  if (!confirm(`"${code}" 코드를 삭제하시겠습니까?`)) return;
+  try {
+    await fetch(API, { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action: 'admin_delete', password: adminPassword, code }) });
+    refreshList();
+  } catch(e) {}
+}
+
+async function toggleCode(code, active) {
+  try {
+    await fetch(API, { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action: 'admin_update', password: adminPassword, code, active }) });
+    refreshList();
+  } catch(e) {}
+}
+
+async function updateExpiry(code, expiresAt) {
+  try {
+    await fetch(API, { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action: 'admin_update', password: adminPassword, code, expiresAt }) });
+  } catch(e) {}
+}
+
+async function refreshList() {
+  try {
+    const res = await fetch(API, { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action: 'admin_list', password: adminPassword }) });
+    const data = await res.json();
+    if (data.codes) renderCodes(data.codes);
+  } catch(e) {}
+}
+</script>
+</body>
+</html>
