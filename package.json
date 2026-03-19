@@ -1,0 +1,9 @@
+json
+{
+  "name": "tradescope-ai",
+  "version": "2.0.0",
+  "private": true,
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0"
+  }
+}
