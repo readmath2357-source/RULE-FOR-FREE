@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TradeScope AI — 관리자</title>
+<title>RFF AI — 관리자</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -66,7 +66,7 @@ tr:hover td{background:var(--card)}
 <body>
 
 <div id="loginPanel">
-  <h1>Trade<span>Scope</span> Admin</h1>
+  <h1>RFF Admin</h1>
   <input type="password" class="login-input" id="adminPw" placeholder="관리자 비밀번호" autocomplete="off">
   <button class="login-btn" onclick="adminLogin()">로그인</button>
   <div class="login-error" id="loginError"></div>
@@ -75,7 +75,7 @@ tr:hover td{background:var(--card)}
 
 <div id="adminPanel">
   <a href="/" class="btn-back">← 메인으로</a>
-  <h1>Trade<span>Scope</span> Admin</h1>
+  <h1>RFF Admin</h1>
   <div class="subtitle">초대 코드 관리 · <span id="storageStatus" style="color:var(--muted)">연결 중...</span></div>
 
   <div class="section">
@@ -241,10 +241,10 @@ async function refreshList() {
     // Show storage status
     const ss = document.getElementById('storageStatus');
     if (data.storage === 'blobs') {
-      ss.textContent = '글로벌 영구 저장 (Blobs)';
+      ss.textContent = '영구 저장 (Blobs)';
       ss.style.color = 'var(--green)';
     } else {
-      ss.textContent = '⚠ 임시 저장 (Memory) — NETLIFY_API_TOKEN 환경변수 필요';
+      ss.textContent = '임시 저장 (Memory)';
       ss.style.color = 'var(--yellow)';
     }
   } catch(e) {}
