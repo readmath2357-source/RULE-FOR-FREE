@@ -10,133 +10,156 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg-primary:#0a0e17;--bg-secondary:#111827;--bg-card:#1a2035;--bg-input:#0d1321;
+  --bg:#0a0e17;--bg2:#111827;--card:#1a2035;--input:#0d1321;
   --border:#1e2a42;--border-active:#3b82f6;
-  --text-primary:#e2e8f0;--text-secondary:#94a3b8;--text-muted:#64748b;
+  --text:#e2e8f0;--text2:#94a3b8;--muted:#64748b;
   --accent:#3b82f6;--accent-glow:rgba(59,130,246,0.15);
   --green:#22c55e;--red:#ef4444;--yellow:#eab308;--cyan:#06b6d4;
   --blue:#3b82f6;--purple:#8b5cf6;
-  --font-mono:'JetBrains Mono',monospace;--font-sans:'Noto Sans KR',sans-serif;
-  --radius:8px;--radius-lg:12px;
+  --mono:'JetBrains Mono',monospace;--sans:'Noto Sans KR',sans-serif;
+  --r:8px;--r-lg:12px;
 }
 html{font-size:14px}
-body{font-family:var(--font-sans);background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow-x:hidden}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 button{cursor:pointer;font-family:inherit;border:none;outline:none}
 input,select{font-family:inherit;outline:none}
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-track{background:var(--bg-secondary)}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 
 /* ===== INVITE SCREEN ===== */
-#inviteScreen{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--bg-primary)}
+#inviteScreen{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--bg)}
 .invite-container{text-align:center;max-width:420px;width:90%;animation:fadeUp .6s ease}
-.invite-logo{font-family:var(--font-mono);font-size:2rem;font-weight:700;color:var(--accent);margin-bottom:.5rem;letter-spacing:-1px}
-.invite-logo span{color:var(--text-primary)}
-.invite-sub{color:var(--text-muted);margin-bottom:2.5rem;font-size:.9rem}
-.invite-input-wrap{position:relative;margin-bottom:1rem}
-.invite-input-wrap input{width:100%;padding:14px 18px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-family:var(--font-mono);font-size:1rem;text-align:center;letter-spacing:3px;text-transform:uppercase;transition:border-color .3s}
+.invite-logo{font-family:var(--mono);font-size:2rem;font-weight:700;color:var(--accent);margin-bottom:.5rem;letter-spacing:-1px}
+.invite-logo span{color:var(--text)}
+.invite-sub{color:var(--muted);margin-bottom:2.5rem;font-size:.9rem}
+.invite-input-wrap input{width:100%;padding:14px 18px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--mono);font-size:1rem;text-align:center;letter-spacing:3px;text-transform:uppercase;transition:border-color .3s;margin-bottom:1rem}
 .invite-input-wrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
-.invite-input-wrap input::placeholder{letter-spacing:1px;text-transform:none;color:var(--text-muted)}
-.invite-btn{width:100%;padding:14px;background:var(--accent);color:#fff;font-weight:600;font-size:1rem;border-radius:var(--radius);transition:all .2s}
+.invite-input-wrap input::placeholder{letter-spacing:1px;text-transform:none;color:var(--muted)}
+.invite-btn{width:100%;padding:14px;background:var(--accent);color:#fff;font-weight:600;font-size:1rem;border-radius:var(--r);transition:all .2s}
 .invite-btn:hover{background:#2563eb;transform:translateY(-1px)}
 .invite-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .invite-error{color:var(--red);font-size:.85rem;margin-top:.75rem;min-height:1.2em}
-.invite-info{color:var(--text-muted);font-size:.75rem;margin-top:1.5rem;line-height:1.6}
-.invite-plan-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.75rem;font-weight:600;margin-top:.5rem}
-.plan-free{background:rgba(100,116,139,.2);color:var(--text-secondary)}
-.plan-standard{background:rgba(59,130,246,.15);color:var(--accent)}
-.plan-pro{background:rgba(139,92,246,.15);color:var(--purple)}
+.invite-info{color:var(--muted);font-size:.75rem;margin-top:1.5rem;line-height:1.6}
 
 /* ===== MAIN APP ===== */
 #app{display:none}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--bg-secondary);border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap}
-.topbar-logo{font-family:var(--font-mono);font-weight:700;font-size:1.1rem;color:var(--accent);white-space:nowrap}
-.topbar-logo span{color:var(--text-primary)}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--bg2);border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap}
+.topbar-logo{font-family:var(--mono);font-weight:700;font-size:1.1rem;color:var(--accent);white-space:nowrap}
+.topbar-logo span{color:var(--text)}
 .topbar-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .topbar-plan{font-size:.75rem;padding:3px 10px;border-radius:20px;font-weight:600}
-.topbar-uses{font-size:.75rem;color:var(--text-muted);font-family:var(--font-mono)}
-.topbar-logout{padding:5px 12px;background:transparent;border:1px solid var(--border);color:var(--text-secondary);border-radius:var(--radius);font-size:.75rem;transition:all .2s}
+.topbar-uses{font-size:.75rem;color:var(--muted);font-family:var(--mono)}
+.topbar-logout{padding:5px 12px;background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:var(--r);font-size:.75rem;transition:all .2s}
 .topbar-logout:hover{border-color:var(--red);color:var(--red)}
+.plan-free{background:rgba(100,116,139,.2);color:var(--text2)}
+.plan-standard{background:rgba(59,130,246,.15);color:var(--accent)}
+.plan-pro{background:rgba(139,92,246,.15);color:var(--purple)}
 
-/* Controls row */
-.controls{display:flex;align-items:center;gap:8px;padding:12px 20px;background:var(--bg-primary);border-bottom:1px solid var(--border);flex-wrap:wrap}
+/* Controls */
+.controls{display:flex;align-items:center;gap:8px;padding:12px 20px;background:var(--bg);border-bottom:1px solid var(--border);flex-wrap:wrap}
 .ctrl-group{display:flex;align-items:center;gap:6px}
-.ctrl-label{font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-mono)}
-.ctrl-select{padding:7px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-size:.85rem;min-width:80px}
+.ctrl-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--mono)}
+.ctrl-select{padding:7px 12px;background:var(--input);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:.85rem;min-width:80px}
 .ctrl-select:focus{border-color:var(--accent)}
-.ctrl-input{padding:7px 12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-primary);font-family:var(--font-mono);font-size:.85rem;width:140px;text-transform:uppercase}
+.ctrl-input{padding:7px 12px;background:var(--input);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--mono);font-size:.85rem;width:140px;text-transform:uppercase}
 .ctrl-input:focus{border-color:var(--accent)}
-.ctrl-btn{padding:7px 16px;border-radius:var(--radius);font-size:.85rem;font-weight:500;transition:all .2s}
-.btn-load{background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary)}
+.ctrl-date{padding:7px 10px;background:var(--input);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--mono);font-size:.8rem;width:130px}
+.ctrl-date:focus{border-color:var(--accent)}
+.ctrl-btn{padding:7px 16px;border-radius:var(--r);font-size:.85rem;font-weight:500;transition:all .2s}
+.btn-load{background:var(--card);border:1px solid var(--border);color:var(--text)}
 .btn-load:hover{border-color:var(--accent);color:var(--accent)}
 .btn-analyze{background:var(--accent);color:#fff;font-weight:600}
 .btn-analyze:hover{background:#2563eb}
 .btn-analyze:disabled{opacity:.4;cursor:not-allowed}
-.status-msg{font-size:.8rem;color:var(--text-muted);font-family:var(--font-mono);margin-left:4px}
+.status-msg{font-size:.8rem;color:var(--muted);font-family:var(--mono);margin-left:4px}
 .status-msg.error{color:var(--red)}
 
-/* Chart area */
-.chart-wrapper{position:relative;width:100%;background:var(--bg-primary)}
+/* Mode toggle */
+.mode-bar{display:flex;align-items:center;gap:12px;padding:8px 20px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.mode-toggle{display:flex;background:var(--input);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.mode-toggle button{padding:6px 16px;font-size:.8rem;font-weight:500;background:transparent;color:var(--muted);transition:all .2s}
+.mode-toggle button.active{background:var(--accent);color:#fff}
+.mode-toggle button:not(.active):hover{color:var(--text)}
+.mode-desc{font-size:.75rem;color:var(--muted)}
+.mode-locked{font-size:.7rem;color:var(--yellow);font-family:var(--mono)}
+
+/* Chart */
+.chart-wrapper{position:relative;width:100%;background:var(--bg)}
 #chartContainer{width:100%;height:55vh;min-height:350px}
-
-/* Range slider */
-.slider-area{padding:12px 20px;background:var(--bg-secondary);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
-.slider-row{display:flex;align-items:center;gap:12px}
-.slider-label{font-size:.7rem;color:var(--text-muted);font-family:var(--font-mono);text-transform:uppercase;min-width:60px}
-.slider-wrap{flex:1;position:relative;height:36px;display:flex;align-items:center}
-.range-slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:var(--border);border-radius:2px;outline:none}
-.range-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 6px var(--accent-glow)}
-.range-slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;border:none}
-.slider-value{font-family:var(--font-mono);font-size:.8rem;color:var(--accent);min-width:70px;text-align:right}
-.slider-info{font-size:.75rem;color:var(--text-muted);margin-top:4px;font-family:var(--font-mono)}
-
-/* Analysis result */
-.result-panel{padding:16px 20px;background:var(--bg-secondary);border-top:1px solid var(--border)}
-.result-hidden{display:none}
-.result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:12px}
-.result-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px}
-.result-card-label{font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-mono);margin-bottom:4px}
-.result-card-value{font-size:1.1rem;font-weight:700;font-family:var(--font-mono)}
-.result-card-detail{font-size:.8rem;color:var(--text-secondary);margin-top:4px}
-.direction-long{color:var(--green)}
-.direction-short{color:var(--red)}
-.direction-hold{color:var(--yellow)}
-.result-comment{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;font-size:.9rem;color:var(--text-secondary);line-height:1.6}
-.result-comment strong{color:var(--text-primary)}
-.indicator-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:12px}
-.ind-card{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px}
-.ind-name{font-size:.7rem;font-family:var(--font-mono);color:var(--text-muted);text-transform:uppercase;letter-spacing:1px}
-.ind-signal{font-size:.85rem;font-weight:600;margin:4px 0 2px}
-.ind-signal.bull{color:var(--green)}.ind-signal.bear{color:var(--red)}.ind-signal.neutral{color:var(--yellow)}
-.ind-detail{font-size:.75rem;color:var(--text-secondary)}
-
-/* Loading overlay */
 .loading-overlay{position:absolute;inset:0;background:rgba(10,14,23,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;gap:16px;backdrop-filter:blur(4px)}
 .loading-overlay.hidden{display:none}
 .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
-.loading-text{font-size:.9rem;color:var(--text-secondary);font-family:var(--font-mono)}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.loading-text{font-size:.9rem;color:var(--text2);font-family:var(--mono)}
 
-/* Responsive */
-@media(max-width:640px){
-  .topbar{padding:8px 12px}
-  .controls{padding:8px 12px}
-  .ctrl-input{width:100px}
-  .slider-area{padding:8px 12px}
-  .result-panel{padding:12px}
-  #chartContainer{height:45vh;min-height:280px}
-  .result-grid{grid-template-columns:1fr 1fr}
-}
+/* Date bar */
+.date-bar{padding:10px 20px;background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);display:none}
+.date-bar-inner{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.date-bar .ctrl-label{min-width:40px}
+.date-info{font-size:.75rem;color:var(--muted);font-family:var(--mono);margin-left:auto}
+
+/* Result panel */
+.result-panel{padding:16px 20px;background:var(--bg2);border-top:1px solid var(--border)}
+.result-hidden{display:none}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:12px}
+.result-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px}
+.result-card-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);margin-bottom:4px}
+.result-card-value{font-size:1.1rem;font-weight:700;font-family:var(--mono)}
+.result-card-detail{font-size:.8rem;color:var(--text2);margin-top:4px}
+.direction-long{color:var(--green)}.direction-short{color:var(--red)}.direction-hold{color:var(--yellow)}
+.result-comment{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;font-size:.9rem;color:var(--text2);line-height:1.6;margin-bottom:12px}
+.result-comment strong{color:var(--text)}
+
+/* Strategic stages */
+.stages-wrap{margin-bottom:12px}
+.stage-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:8px;position:relative}
+.stage-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:var(--r) 0 0 var(--r)}
+.stage-card.stage-1::before{background:var(--accent)}
+.stage-card.stage-2::before{background:var(--purple)}
+.stage-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.stage-num{font-family:var(--mono);font-weight:700;font-size:.85rem}
+.stage-1 .stage-num{color:var(--accent)}
+.stage-2 .stage-num{color:var(--purple)}
+.stage-trigger{font-size:.8rem;color:var(--yellow);font-family:var(--mono)}
+.stage-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stage-item{text-align:center}
+.stage-item-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;font-family:var(--mono)}
+.stage-item-val{font-size:.95rem;font-weight:600;font-family:var(--mono);margin-top:2px}
+.stage-reason{font-size:.8rem;color:var(--text2);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+
+/* Exit strategy */
+.exit-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:12px}
+.exit-title{font-size:.7rem;color:var(--cyan);text-transform:uppercase;font-family:var(--mono);letter-spacing:1px;margin-bottom:8px}
+.exit-row{font-size:.8rem;color:var(--text2);margin-bottom:4px}
+.exit-row strong{color:var(--text);font-weight:500}
+
+/* Indicators */
+.indicator-section-title{font-size:.7rem;color:var(--muted);text-transform:uppercase;font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;margin-top:4px}
+.indicator-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px}
+.ind-card{background:var(--input);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;position:relative}
+.ind-card.primary::after{content:'PRIMARY';position:absolute;top:4px;right:6px;font-size:.5rem;color:var(--accent);font-family:var(--mono);letter-spacing:1px;opacity:.7}
+.ind-card.supplementary::after{content:'SUB';position:absolute;top:4px;right:6px;font-size:.5rem;color:var(--muted);font-family:var(--mono);letter-spacing:1px;opacity:.5}
+.ind-name{font-size:.7rem;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.ind-signal{font-size:.85rem;font-weight:600;margin:4px 0 2px}
+.ind-signal.bull{color:var(--green)}.ind-signal.bear{color:var(--red)}.ind-signal.neutral{color:var(--yellow)}
+.ind-detail{font-size:.75rem;color:var(--text2)}
 
 /* Disclaimer */
-.disclaimer{padding:12px 20px;text-align:center;font-size:.7rem;color:var(--text-muted);border-top:1px solid var(--border);background:var(--bg-secondary);line-height:1.5}
+.disclaimer{padding:12px 20px;text-align:center;font-size:.7rem;color:var(--muted);border-top:1px solid var(--border);background:var(--bg2);line-height:1.5}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:640px){
+  .topbar{padding:8px 12px}.controls{padding:8px 12px}.date-bar{padding:8px 12px}
+  .result-panel{padding:12px}#chartContainer{height:45vh;min-height:280px}
+  .result-grid{grid-template-columns:1fr 1fr}
+  .stage-grid{grid-template-columns:repeat(2,1fr)}
+  .ctrl-input{width:100px}.ctrl-date{width:110px}
+}
 </style>
 </head>
 <body>
 
-<!-- ===== INVITE CODE SCREEN ===== -->
+<!-- INVITE SCREEN -->
 <div id="inviteScreen">
   <div class="invite-container">
     <div class="invite-logo">Trade<span>Scope</span></div>
@@ -150,11 +173,10 @@ input,select{font-family:inherit;outline:none}
   </div>
 </div>
 
-<!-- ===== MAIN APP ===== -->
+<!-- MAIN APP -->
 <div id="app">
-  <!-- Top bar -->
   <div class="topbar">
-    <div class="topbar-logo">Trade<span>Scope</span> <span style="font-size:.7rem;color:var(--text-muted);font-weight:400">AI</span></div>
+    <div class="topbar-logo">Trade<span>Scope</span> <span style="font-size:.7rem;color:var(--muted);font-weight:400">AI</span></div>
     <div class="topbar-controls">
       <span class="topbar-plan" id="planBadge"></span>
       <span class="topbar-uses" id="usesDisplay"></span>
@@ -162,7 +184,7 @@ input,select{font-family:inherit;outline:none}
     </div>
   </div>
 
-  <!-- Controls -->
+  <!-- Controls row 1: market/symbol/timeframe -->
   <div class="controls">
     <div class="ctrl-group">
       <span class="ctrl-label">마켓</span>
@@ -190,9 +212,27 @@ input,select{font-family:inherit;outline:none}
         <option value="1wk">주봉</option>
       </select>
     </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">시작</span>
+      <input type="date" class="ctrl-date" id="dateStart">
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">종료</span>
+      <input type="date" class="ctrl-date" id="dateEnd">
+    </div>
     <button class="ctrl-btn btn-load" onclick="loadData()">데이터 로드</button>
     <button class="ctrl-btn btn-analyze" id="analyzeBtn" onclick="runAnalysis()" disabled>AI 분석</button>
     <span class="status-msg" id="statusMsg"></span>
+  </div>
+
+  <!-- Mode toggle bar -->
+  <div class="mode-bar" id="modeBar" style="display:none">
+    <div class="mode-toggle" id="modeToggle">
+      <button class="active" data-mode="simple" onclick="setMode('simple')">간단 매매</button>
+      <button data-mode="strategic" onclick="setMode('strategic')">전략 매매</button>
+    </div>
+    <span class="mode-desc" id="modeDesc">단일 진입/청산</span>
+    <span class="mode-locked" id="modeLocked" style="display:none"></span>
   </div>
 
   <!-- Chart -->
@@ -204,55 +244,45 @@ input,select{font-family:inherit;outline:none}
     </div>
   </div>
 
-  <!-- Range sliders -->
-  <div class="slider-area" id="sliderArea" style="display:none">
-    <div class="slider-row">
-      <span class="slider-label">시작</span>
-      <div class="slider-wrap">
-        <input type="range" class="range-slider" id="sliderStart" min="0" max="100" value="0">
-      </div>
-      <span class="slider-value" id="sliderStartVal">0</span>
+  <!-- Date info bar -->
+  <div class="date-bar" id="dateBar">
+    <div class="date-bar-inner">
+      <span class="date-info" id="dateInfo"></span>
     </div>
-    <div class="slider-row" style="margin-top:6px">
-      <span class="slider-label">종료</span>
-      <div class="slider-wrap">
-        <input type="range" class="range-slider" id="sliderEnd" min="0" max="100" value="100">
-      </div>
-      <span class="slider-value" id="sliderEndVal">100</span>
-    </div>
-    <div class="slider-info" id="sliderInfo">구간을 선택하세요</div>
   </div>
 
   <!-- Results -->
   <div class="result-panel result-hidden" id="resultPanel">
-    <div class="result-grid">
-      <div class="result-card">
-        <div class="result-card-label">방향</div>
-        <div class="result-card-value" id="resDirection">—</div>
-        <div class="result-card-detail" id="resConfidence"></div>
-      </div>
-      <div class="result-card">
-        <div class="result-card-label">진입가</div>
-        <div class="result-card-value" id="resEntry" style="color:var(--green)">—</div>
-      </div>
-      <div class="result-card">
-        <div class="result-card-label">익절가</div>
-        <div class="result-card-value" id="resTP" style="color:var(--blue)">—</div>
-      </div>
-      <div class="result-card">
-        <div class="result-card-label">손절가</div>
-        <div class="result-card-value" id="resSL" style="color:var(--red)">—</div>
-      </div>
-      <div class="result-card">
-        <div class="result-card-label">리스크:리워드</div>
-        <div class="result-card-value" id="resRR" style="color:var(--cyan)">—</div>
+    <!-- Simple mode results -->
+    <div id="simpleResults">
+      <div class="result-grid">
+        <div class="result-card"><div class="result-card-label">방향</div><div class="result-card-value" id="resDirection">—</div><div class="result-card-detail" id="resConfidence"></div></div>
+        <div class="result-card"><div class="result-card-label">진입가</div><div class="result-card-value" id="resEntry" style="color:var(--green)">—</div></div>
+        <div class="result-card"><div class="result-card-label">익절가</div><div class="result-card-value" id="resTP" style="color:var(--blue)">—</div></div>
+        <div class="result-card"><div class="result-card-label">손절가</div><div class="result-card-value" id="resSL" style="color:var(--red)">—</div></div>
+        <div class="result-card"><div class="result-card-label">리스크:리워드</div><div class="result-card-value" id="resRR" style="color:var(--cyan)">—</div></div>
       </div>
     </div>
+
+    <!-- Strategic mode results -->
+    <div id="strategicResults" style="display:none">
+      <div class="result-grid" style="margin-bottom:12px">
+        <div class="result-card"><div class="result-card-label">방향</div><div class="result-card-value" id="resDirection2">—</div><div class="result-card-detail" id="resConfidence2"></div></div>
+      </div>
+      <div class="stages-wrap" id="stagesWrap"></div>
+      <div class="exit-card" id="exitCard" style="display:none">
+        <div class="exit-title">청산 전략</div>
+        <div id="exitContent"></div>
+      </div>
+    </div>
+
     <div class="result-comment" id="resComment"></div>
+
+    <!-- Indicators (shared) -->
+    <div class="indicator-section-title">주요 지표 (TSI · RSI = PRIMARY)</div>
     <div class="indicator-row" id="indicatorRow"></div>
   </div>
 
-  <!-- Disclaimer -->
   <div class="disclaimer">
     본 분석은 AI 자동 해석이며 투자 조언이 아닙니다. 실거래 전 반드시 본인의 판단으로 검증하세요.
   </div>
@@ -261,25 +291,32 @@ input,select{font-family:inherit;outline:none}
 <script>
 // ===== STATE =====
 let allCandles = [];
-let chart = null;
-let candleSeries = null;
-let volumeSeries = null;
-let currentCode = '';
-let currentPlan = '';
+let chart = null, candleSeries = null, volumeSeries = null;
+let currentCode = '', currentPlan = '';
+let currentMode = 'simple';
 let priceLines = [];
-
 const API_BASE = '/.netlify/functions';
 
-// ===== INVITE SYSTEM =====
+// ===== DEFAULTS =====
+function setDefaultDates() {
+  const now = new Date();
+  const end = now.toISOString().split('T')[0];
+  const start = new Date(now);
+  start.setMonth(start.getMonth() - 6);
+  document.getElementById('dateEnd').value = end;
+  document.getElementById('dateStart').value = start.toISOString().split('T')[0];
+}
+setDefaultDates();
+
+// ===== STATUS =====
 function setStatus(msg, isError) {
   const el = document.getElementById('statusMsg');
   el.textContent = msg;
   el.className = 'status-msg' + (isError ? ' error' : '');
 }
 
-document.getElementById('inviteInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') verifyInvite();
-});
+// ===== INVITE =====
+document.getElementById('inviteInput').addEventListener('keydown', e => { if (e.key === 'Enter') verifyInvite(); });
 
 async function verifyInvite() {
   const code = document.getElementById('inviteInput').value.trim();
@@ -302,9 +339,7 @@ async function verifyInvite() {
     } else {
       document.getElementById('inviteError').textContent = data.error || '유효하지 않은 코드';
     }
-  } catch (err) {
-    document.getElementById('inviteError').textContent = '서버 연결 실패';
-  }
+  } catch { document.getElementById('inviteError').textContent = '서버 연결 실패'; }
   btn.disabled = false; btn.textContent = '접속하기';
 }
 
@@ -312,10 +347,11 @@ function showApp(data) {
   document.getElementById('inviteScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   const badge = document.getElementById('planBadge');
-  const planNames = { free: '무료체험', standard: '스탠다드', pro: '프로' };
-  badge.textContent = planNames[currentPlan] || currentPlan;
+  const names = { free: '무료체험', standard: '스탠다드', pro: '프로' };
+  badge.textContent = names[currentPlan] || currentPlan;
   badge.className = 'topbar-plan plan-' + currentPlan;
   updateUsesDisplay(data);
+  setupModeBar();
   initChart();
 }
 
@@ -323,7 +359,7 @@ function updateUsesDisplay(data) {
   const el = document.getElementById('usesDisplay');
   if (data && data.remaining !== undefined) {
     el.textContent = typeof data.remaining === 'number'
-      ? `오늘 ${data.usedToday || 0}/${data.maxDaily}회 사용`
+      ? `오늘 ${data.usedToday || 0}/${data.maxDaily}회`
       : '무제한';
   }
 }
@@ -336,8 +372,8 @@ function logout() {
   document.getElementById('inviteInput').value = '';
 }
 
-// Auto-login from session
-(function checkSession() {
+// Auto-login
+(function() {
   const saved = sessionStorage.getItem('inviteCode');
   if (saved) {
     currentCode = saved;
@@ -345,56 +381,87 @@ function logout() {
     fetch(API_BASE + '/invite', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ action: 'verify', code: currentCode })
-    }).then(r => r.json()).then(data => {
-      if (data.valid) showApp(data);
-    }).catch(() => {});
+    }).then(r => r.json()).then(data => { if (data.valid) showApp(data); }).catch(() => {});
   }
 })();
 
-// ===== CHART INIT =====
+// ===== MODE =====
+function setupModeBar() {
+  const bar = document.getElementById('modeBar');
+  bar.style.display = 'flex';
+  const locked = document.getElementById('modeLocked');
+  const btns = document.querySelectorAll('#modeToggle button');
+
+  if (currentPlan === 'free') {
+    // Free: simple only
+    currentMode = 'simple';
+    btns[1].disabled = true;
+    btns[1].style.opacity = '.3';
+    locked.textContent = '전략 매매는 스탠다드 이상 플랜에서 사용 가능';
+    locked.style.display = 'inline';
+  } else {
+    // Standard & Pro: both modes
+    btns[1].disabled = false;
+    btns[1].style.opacity = '1';
+    locked.style.display = 'none';
+  }
+  setMode(currentMode);
+}
+
+function setMode(mode) {
+  if (mode === 'strategic' && currentPlan === 'free') return;
+  currentMode = mode;
+  document.querySelectorAll('#modeToggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  const desc = document.getElementById('modeDesc');
+  desc.textContent = mode === 'simple' ? '단일 진입/청산' : '1차·2차 분할 매매';
+  // Hide results on mode switch
+  document.getElementById('resultPanel').classList.add('result-hidden');
+}
+
+// ===== CHART =====
 function initChart() {
   const container = document.getElementById('chartContainer');
   if (chart) { chart.remove(); chart = null; }
   chart = LightweightCharts.createChart(container, {
-    width: container.clientWidth,
-    height: container.clientHeight,
+    width: container.clientWidth, height: container.clientHeight,
     layout: { background: { type: 'solid', color: '#0a0e17' }, textColor: '#94a3b8', fontSize: 11, fontFamily: 'JetBrains Mono' },
     grid: { vertLines: { color: '#1e2a4222' }, horzLines: { color: '#1e2a4222' } },
     crosshair: { mode: 0, vertLine: { color: '#3b82f644', width: 1 }, horzLine: { color: '#3b82f644', width: 1 } },
     rightPriceScale: { borderColor: '#1e2a42', scaleMargins: { top: 0.05, bottom: 0.25 } },
     timeScale: { borderColor: '#1e2a42', timeVisible: true, secondsVisible: false }
   });
-
   candleSeries = chart.addCandlestickSeries({
     upColor: '#22c55e', downColor: '#ef4444', borderUpColor: '#22c55e', borderDownColor: '#ef4444',
     wickUpColor: '#22c55e88', wickDownColor: '#ef444488'
   });
-
-  volumeSeries = chart.addHistogramSeries({
-    priceFormat: { type: 'volume' },
-    priceScaleId: 'vol',
-    color: '#3b82f633'
-  });
+  volumeSeries = chart.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol', color: '#3b82f633' });
   chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
-
   new ResizeObserver(() => {
     chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
   }).observe(container);
 }
 
-// ===== LOAD DATA =====
+// ===== LOAD DATA (date-based) =====
 async function loadData() {
   const symbol = document.getElementById('symbolInput').value.trim();
   const market = document.getElementById('marketSelect').value;
   const tf = document.getElementById('tfSelect').value;
+  const startDate = document.getElementById('dateStart').value;
+  const endDate = document.getElementById('dateEnd').value;
   if (!symbol) { setStatus('심볼을 입력하세요', true); return; }
 
   showLoading('데이터 불러오는 중...');
   setStatus('로딩 중...');
   try {
+    const payload = { symbol, market, timeframe: tf };
+    if (startDate) payload.startDate = startDate;
+    if (endDate) payload.endDate = endDate;
+
     const res = await fetch(API_BASE + '/yahoo', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ symbol, market, timeframe: tf })
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
     if (data.error) { setStatus(data.error, true); hideLoading(); return; }
@@ -402,123 +469,64 @@ async function loadData() {
 
     allCandles = data.candles;
     setStatus(`${data.symbol} — ${allCandles.length}개 캔들 로드`, false);
-    setupSliders();
     updateChart();
+    updateDateInfo();
     document.getElementById('analyzeBtn').disabled = false;
     document.getElementById('resultPanel').classList.add('result-hidden');
     clearPriceLines();
-  } catch (err) {
-    setStatus('네트워크 오류', true);
-  }
+  } catch { setStatus('네트워크 오류', true); }
   hideLoading();
 }
 
-// ===== SLIDERS =====
-function setupSliders() {
-  const area = document.getElementById('sliderArea');
-  area.style.display = 'block';
-  const total = allCandles.length;
-  const startSlider = document.getElementById('sliderStart');
-  const endSlider = document.getElementById('sliderEnd');
-  startSlider.max = total - 1;
-  endSlider.max = total - 1;
-  // Default: last 100 candles
-  const defStart = Math.max(0, total - 100);
-  startSlider.value = defStart;
-  endSlider.value = total - 1;
-  updateSliderDisplay();
-
-  startSlider.oninput = () => {
-    if (parseInt(startSlider.value) >= parseInt(endSlider.value)) {
-      startSlider.value = parseInt(endSlider.value) - 1;
-    }
-    updateSliderDisplay();
-    updateChart();
-  };
-  endSlider.oninput = () => {
-    if (parseInt(endSlider.value) <= parseInt(startSlider.value)) {
-      endSlider.value = parseInt(startSlider.value) + 1;
-    }
-    updateSliderDisplay();
-    updateChart();
-  };
-}
-
-function getSliderRange() {
-  const s = parseInt(document.getElementById('sliderStart').value);
-  const e = parseInt(document.getElementById('sliderEnd').value);
-  return [s, e];
-}
-
-function updateSliderDisplay() {
-  const [s, e] = getSliderRange();
-  document.getElementById('sliderStartVal').textContent = s;
-  document.getElementById('sliderEndVal').textContent = e;
-  const count = e - s + 1;
-  document.getElementById('sliderInfo').textContent = `선택 구간: ${count}개 캔들 (인덱스 ${s} ~ ${e})`;
-}
-
-// ===== UPDATE CHART =====
 function updateChart() {
   if (!candleSeries || allCandles.length === 0) return;
-  const [s, e] = getSliderRange();
-  const slice = allCandles.slice(s, e + 1);
-
-  // Format for lightweight charts
   const isIntraday = ['1m','5m','15m','1h','4h'].includes(document.getElementById('tfSelect').value);
-  const candleData = slice.map(c => ({
+  const candleData = allCandles.map(c => ({
     time: isIntraday ? c.time : Math.floor(c.time / 86400) * 86400,
     open: c.open, high: c.high, low: c.low, close: c.close
   }));
-  const volData = slice.map(c => ({
+  const volData = allCandles.map(c => ({
     time: isIntraday ? c.time : Math.floor(c.time / 86400) * 86400,
-    value: c.volume,
-    color: c.close >= c.open ? '#22c55e33' : '#ef444433'
+    value: c.volume, color: c.close >= c.open ? '#22c55e33' : '#ef444433'
   }));
-
   candleSeries.setData(candleData);
   volumeSeries.setData(volData);
   chart.timeScale().fitContent();
   clearPriceLines();
 }
 
-// ===== PRICE LINES =====
-function clearPriceLines() {
-  priceLines.forEach(l => {
-    try { candleSeries.removePriceLine(l); } catch(e) {}
-  });
-  priceLines = [];
+function updateDateInfo() {
+  const bar = document.getElementById('dateBar');
+  bar.style.display = 'block';
+  if (allCandles.length === 0) { document.getElementById('dateInfo').textContent = ''; return; }
+  const first = new Date(allCandles[0].time * 1000).toLocaleDateString('ko-KR');
+  const last = new Date(allCandles[allCandles.length - 1].time * 1000).toLocaleDateString('ko-KR');
+  document.getElementById('dateInfo').textContent = `${first} ~ ${last} · ${allCandles.length}개 캔들`;
 }
 
+// ===== PRICE LINES =====
+function clearPriceLines() {
+  priceLines.forEach(l => { try { candleSeries.removePriceLine(l); } catch {} });
+  priceLines = [];
+  try { candleSeries.setMarkers([]); } catch {}
+}
 function addPriceLine(price, color, title) {
-  const line = candleSeries.createPriceLine({
-    price: price,
-    color: color,
-    lineWidth: 2,
-    lineStyle: 0, // solid
-    axisLabelVisible: true,
-    title: title
-  });
+  const line = candleSeries.createPriceLine({ price, color, lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title });
   priceLines.push(line);
 }
 
 // ===== AI ANALYSIS =====
 async function runAnalysis() {
   if (allCandles.length === 0) return;
-
-  // Check usage
+  // Verify usage
   try {
-    const verifyRes = await fetch(API_BASE + '/invite', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ action: 'verify', code: currentCode })
-    });
-    const verifyData = await verifyRes.json();
-    if (!verifyData.valid) { setStatus(verifyData.error, true); return; }
-  } catch(e) {}
+    const vr = await fetch(API_BASE + '/invite', { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action: 'verify', code: currentCode }) });
+    const vd = await vr.json();
+    if (!vd.valid) { setStatus(vd.error, true); return; }
+  } catch {}
 
-  const [s, e] = getSliderRange();
-  const slice = allCandles.slice(s, e + 1);
-  if (slice.length < 30) { setStatus('최소 30개 캔들이 필요합니다', true); return; }
+  if (allCandles.length < 30) { setStatus('최소 30개 캔들이 필요합니다', true); return; }
 
   const symbol = document.getElementById('symbolInput').value.trim().toUpperCase();
   const tf = document.getElementById('tfSelect').value;
@@ -530,108 +538,163 @@ async function runAnalysis() {
   try {
     const res = await fetch(API_BASE + '/analyze', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ candles: slice, symbol, timeframe: tf })
+      body: JSON.stringify({ candles: allCandles, symbol, timeframe: tf, mode: currentMode })
     });
     const data = await res.json();
-
-    if (data.error) {
-      setStatus(data.error, true);
-      hideLoading();
-      document.getElementById('analyzeBtn').disabled = false;
-      return;
-    }
+    if (data.error) { setStatus(data.error, true); hideLoading(); document.getElementById('analyzeBtn').disabled = false; return; }
 
     // Increment usage
     try {
-      const useRes = await fetch(API_BASE + '/invite', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ action: 'use', code: currentCode })
-      });
-      const useData = await useRes.json();
-      updateUsesDisplay(useData);
-    } catch(e) {}
+      const ur = await fetch(API_BASE + '/invite', { method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ action: 'use', code: currentCode }) });
+      const ud = await ur.json();
+      updateUsesDisplay(ud);
+    } catch {}
 
     displayResults(data);
     setStatus('분석 완료', false);
-  } catch (err) {
-    setStatus('분석 실패: ' + err.message, true);
-  }
-
+  } catch (err) { setStatus('분석 실패: ' + err.message, true); }
   hideLoading();
   document.getElementById('analyzeBtn').disabled = false;
 }
 
+// ===== DISPLAY RESULTS =====
+const fmt = v => v != null ? Number(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:6}) : '—';
+
 function displayResults(data) {
   const panel = document.getElementById('resultPanel');
   panel.classList.remove('result-hidden');
+  clearPriceLines();
 
-  // Direction
-  const dirEl = document.getElementById('resDirection');
+  const isStrategic = data.mode === 'strategic' && data.stages;
+
+  // Toggle simple/strategic sections
+  document.getElementById('simpleResults').style.display = isStrategic ? 'none' : 'block';
+  document.getElementById('strategicResults').style.display = isStrategic ? 'block' : 'none';
+
+  if (isStrategic) {
+    displayStrategicResults(data);
+  } else {
+    displaySimpleResults(data);
+  }
+
+  // Comment
+  document.getElementById('resComment').innerHTML = `<strong>AI 코멘트:</strong> ${data.comment || '—'}`;
+
+  // Indicators (TSI/RSI first as primary)
+  displayIndicators(data.indicators);
+
+  // ICT overlay
+  drawICTOverlay(data.ictOverlay);
+
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function displaySimpleResults(data) {
   const dirMap = { LONG: '매수 (LONG)', SHORT: '매도 (SHORT)', HOLD: '관망 (HOLD)' };
   const dirClass = { LONG: 'direction-long', SHORT: 'direction-short', HOLD: 'direction-hold' };
+
+  const dirEl = document.getElementById('resDirection');
   dirEl.textContent = dirMap[data.direction] || data.direction;
   dirEl.className = 'result-card-value ' + (dirClass[data.direction] || '');
   document.getElementById('resConfidence').textContent = `신뢰도: ${data.confidence || '—'}`;
-
-  // Prices
-  const fmt = (v) => v != null ? Number(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:6}) : '—';
   document.getElementById('resEntry').textContent = fmt(data.entry);
   document.getElementById('resTP').textContent = fmt(data.takeProfit);
   document.getElementById('resSL').textContent = fmt(data.stopLoss);
   document.getElementById('resRR').textContent = data.riskReward || '—';
 
-  // Comment
-  document.getElementById('resComment').innerHTML = `<strong>AI 코멘트:</strong> ${data.comment || '—'}`;
-
-  // Indicators
-  const indRow = document.getElementById('indicatorRow');
-  indRow.innerHTML = '';
-  if (data.indicators) {
-    const indicators = [
-      { key: 'volume', name: '거래량' },
-      { key: 'ict', name: 'ICT' },
-      { key: 'tsi', name: 'TSI' },
-      { key: 'rsi', name: 'RSI' }
-    ];
-    indicators.forEach(ind => {
-      const d = data.indicators[ind.key];
-      if (!d) return;
-      const sigClass = d.signal === 'BULLISH' ? 'bull' : d.signal === 'BEARISH' ? 'bear' : 'neutral';
-      const sigText = d.signal === 'BULLISH' ? '매수 강세' : d.signal === 'BEARISH' ? '매도 강세' : '중립';
-      let extra = '';
-      if (d.value !== undefined) extra = ` (${Number(d.value).toFixed(2)})`;
-      indRow.innerHTML += `
-        <div class="ind-card">
-          <div class="ind-name">${ind.name}</div>
-          <div class="ind-signal ${sigClass}">${sigText}${extra}</div>
-          <div class="ind-detail">${d.detail || ''}</div>
-        </div>`;
-    });
-  }
-
-  // Draw price lines on chart
-  clearPriceLines();
   if (data.entry) addPriceLine(data.entry, '#22c55e', '진입 ' + fmt(data.entry));
   if (data.takeProfit) addPriceLine(data.takeProfit, '#3b82f6', '익절 ' + fmt(data.takeProfit));
   if (data.stopLoss) addPriceLine(data.stopLoss, '#ef4444', '손절 ' + fmt(data.stopLoss));
+}
 
-  // Draw ICT overlays if available
-  drawICTOverlay(data.ictOverlay);
+function displayStrategicResults(data) {
+  const dirMap = { LONG: '매수 (LONG)', SHORT: '매도 (SHORT)', HOLD: '관망 (HOLD)' };
+  const dirClass = { LONG: 'direction-long', SHORT: 'direction-short', HOLD: 'direction-hold' };
 
-  // Scroll to results
-  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  const dirEl = document.getElementById('resDirection2');
+  dirEl.textContent = dirMap[data.direction] || data.direction;
+  dirEl.className = 'result-card-value ' + (dirClass[data.direction] || '');
+  document.getElementById('resConfidence2').textContent = `신뢰도: ${data.confidence || '—'}`;
+
+  // Stages
+  const wrap = document.getElementById('stagesWrap');
+  wrap.innerHTML = '';
+  const stageColors = ['#3b82f6', '#8b5cf6'];
+  (data.stages || []).forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = `stage-card stage-${i + 1}`;
+    card.innerHTML = `
+      <div class="stage-header">
+        <span class="stage-num">${s.label || (i + 1) + '차 진입'}</span>
+        <span class="stage-trigger">${s.trigger || ''}</span>
+      </div>
+      <div class="stage-grid">
+        <div class="stage-item"><div class="stage-item-label">진입가</div><div class="stage-item-val" style="color:var(--green)">${fmt(s.entry)}</div></div>
+        <div class="stage-item"><div class="stage-item-label">손절가</div><div class="stage-item-val" style="color:var(--red)">${fmt(s.stopLoss)}</div></div>
+        <div class="stage-item"><div class="stage-item-label">익절가</div><div class="stage-item-val" style="color:var(--blue)">${fmt(s.takeProfit)}</div></div>
+        <div class="stage-item"><div class="stage-item-label">비중</div><div class="stage-item-val" style="color:var(--cyan)">${s.positionSize || '50%'}</div></div>
+      </div>
+      ${s.reason ? `<div class="stage-reason">${s.reason}</div>` : ''}
+    `;
+    wrap.appendChild(card);
+
+    // Price lines per stage
+    const clr = stageColors[i] || '#3b82f6';
+    if (s.entry) addPriceLine(s.entry, '#22c55e', `${i+1}차 진입`);
+    if (s.stopLoss) addPriceLine(s.stopLoss, '#ef4444', `${i+1}차 손절`);
+    if (s.takeProfit) addPriceLine(s.takeProfit, clr, `${i+1}차 익절`);
+  });
+
+  // Exit strategy
+  if (data.exitStrategy) {
+    const ec = document.getElementById('exitCard');
+    ec.style.display = 'block';
+    const ex = data.exitStrategy;
+    document.getElementById('exitContent').innerHTML = `
+      ${ex.partialExit ? `<div class="exit-row"><strong>부분 청산:</strong> ${ex.partialExit}</div>` : ''}
+      ${ex.fullExit ? `<div class="exit-row"><strong>전량 청산:</strong> ${ex.fullExit}</div>` : ''}
+      ${ex.trailingStop ? `<div class="exit-row"><strong>트레일링 스탑:</strong> ${ex.trailingStop}</div>` : ''}
+    `;
+  } else {
+    document.getElementById('exitCard').style.display = 'none';
+  }
+}
+
+function displayIndicators(indicators) {
+  const row = document.getElementById('indicatorRow');
+  row.innerHTML = '';
+  if (!indicators) return;
+
+  // Order: TSI, RSI (primary) → Volume, ICT (supplementary)
+  const indList = [
+    { key: 'tsi', name: 'TSI (13,8,8)', primary: true },
+    { key: 'rsi', name: 'RSI (21)', primary: true },
+    { key: 'volume', name: '거래량', primary: false },
+    { key: 'ict', name: 'ICT', primary: false }
+  ];
+  indList.forEach(ind => {
+    const d = indicators[ind.key];
+    if (!d) return;
+    const sigClass = d.signal === 'BULLISH' ? 'bull' : d.signal === 'BEARISH' ? 'bear' : 'neutral';
+    const sigText = d.signal === 'BULLISH' ? '매수 강세' : d.signal === 'BEARISH' ? '매도 강세' : '중립';
+    let extra = '';
+    if (d.value !== undefined) extra = ` (${Number(d.value).toFixed(2)})`;
+    row.innerHTML += `
+      <div class="ind-card ${ind.primary ? 'primary' : 'supplementary'}">
+        <div class="ind-name">${ind.name}</div>
+        <div class="ind-signal ${sigClass}">${sigText}${extra}</div>
+        <div class="ind-detail">${d.detail || ''}</div>
+      </div>`;
+  });
 }
 
 function drawICTOverlay(overlay) {
   if (!overlay) return;
-  // Add markers for BOS
   if (overlay.bos && overlay.bos.length > 0) {
-    const [s] = getSliderRange();
     const isIntraday = ['1m','5m','15m','1h','4h'].includes(document.getElementById('tfSelect').value);
     const markers = overlay.bos.map(b => {
-      const idx = b.index - s;
-      if (idx < 0 || idx >= allCandles.length) return null;
-      const candle = allCandles[b.index] || allCandles[s + idx];
+      const candle = allCandles[b.index];
       if (!candle) return null;
       return {
         time: isIntraday ? candle.time : Math.floor(candle.time / 86400) * 86400,
@@ -641,20 +704,14 @@ function drawICTOverlay(overlay) {
         text: b.type === 'bullish' ? 'BOS↑' : 'BOS↓'
       };
     }).filter(Boolean);
-    if (markers.length > 0) {
-      try { candleSeries.setMarkers(markers); } catch(e) {}
-    }
+    if (markers.length > 0) try { candleSeries.setMarkers(markers); } catch {}
   }
-
-  // Draw OB / FVG as additional horizontal lines
   if (overlay.orderBlocks) {
     overlay.orderBlocks.slice(0, 3).forEach(ob => {
-      const color = ob.type === 'bullish' ? '#22c55e44' : '#ef444444';
-      addPriceLine(ob.high, color, 'OB');
-      addPriceLine(ob.low, color, 'OB');
+      const c = ob.type === 'bullish' ? '#22c55e44' : '#ef444444';
+      addPriceLine(ob.high, c, 'OB'); addPriceLine(ob.low, c, 'OB');
     });
   }
-
   if (overlay.liquidityZones) {
     overlay.liquidityZones.slice(0, 2).forEach(lz => {
       addPriceLine(lz.price, '#eab30866', lz.type === 'buy_side' ? 'BSL' : 'SSL');
@@ -662,29 +719,16 @@ function drawICTOverlay(overlay) {
   }
 }
 
-// ===== LOADING =====
-function showLoading(text) {
-  const el = document.getElementById('loadingOverlay');
-  document.getElementById('loadingText').textContent = text || '로딩 중...';
-  el.classList.remove('hidden');
-}
-function hideLoading() {
-  document.getElementById('loadingOverlay').classList.add('hidden');
-}
+// ===== HELPERS =====
+function showLoading(text) { document.getElementById('loadingText').textContent = text || '로딩 중...'; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
 
-// ===== MARKET PRESETS =====
+// Market presets
 document.getElementById('marketSelect').addEventListener('change', function() {
-  const placeholders = {
-    us_stock: 'AAPL', kr_stock: '005930', crypto: 'BTC',
-    forex: 'EURUSD', futures: 'ES=F'
-  };
-  document.getElementById('symbolInput').placeholder = placeholders[this.value] || 'AAPL';
+  const ph = { us_stock: 'AAPL', kr_stock: '005930', crypto: 'BTC', forex: 'EURUSD', futures: 'ES=F' };
+  document.getElementById('symbolInput').placeholder = ph[this.value] || 'AAPL';
 });
-
-// Enter key on symbol
-document.getElementById('symbolInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') loadData();
-});
+document.getElementById('symbolInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadData(); });
 </script>
 </body>
 </html>
