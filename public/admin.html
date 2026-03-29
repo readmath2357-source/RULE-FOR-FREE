@@ -21,7 +21,6 @@ h1 span{color:var(--text)}
 button{cursor:pointer;font-family:inherit;border:none;outline:none}
 input,select{font-family:inherit;outline:none}
 
-/* Login */
 #loginPanel{max-width:400px;margin:80px auto;text-align:center}
 #loginPanel h1{margin-bottom:20px}
 .login-input{width:100%;padding:12px;background:var(--input);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:1rem;margin-bottom:12px;text-align:center}
@@ -29,13 +28,11 @@ input,select{font-family:inherit;outline:none}
 .login-btn{width:100%;padding:12px;background:var(--accent);color:#fff;font-weight:600;border-radius:var(--r);font-size:1rem}
 .login-btn:hover{background:#2563eb}
 .login-error{color:var(--red);font-size:.85rem;margin-top:8px}
+.login-note{color:var(--muted);font-size:.7rem;margin-top:12px;line-height:1.5}
 
-/* Admin panel */
 #adminPanel{display:none;max-width:900px;margin:0 auto}
 .section{margin-bottom:24px}
 .section-title{font-family:var(--mono);font-size:.85rem;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px}
-
-/* Create form */
 .create-form{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px}
 .form-group{display:flex;flex-direction:column;gap:4px}
 .form-group label{font-size:.7rem;color:var(--muted);text-transform:uppercase;font-family:var(--mono);letter-spacing:.5px}
@@ -44,8 +41,6 @@ input,select{font-family:inherit;outline:none}
 .create-btn{padding:8px 20px;background:var(--accent);color:#fff;font-weight:600;border-radius:var(--r);align-self:flex-end;font-size:.85rem;height:36px}
 .create-btn:hover{background:#2563eb}
 .create-msg{font-size:.85rem;margin-top:8px}
-
-/* Table */
 .table-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:.85rem}
 th{background:var(--bg2);color:var(--muted);text-align:left;padding:10px 12px;font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border)}
@@ -70,19 +65,18 @@ tr:hover td{background:var(--card)}
 </head>
 <body>
 
-<!-- Login -->
 <div id="loginPanel">
   <h1>Trade<span>Scope</span> Admin</h1>
   <input type="password" class="login-input" id="adminPw" placeholder="관리자 비밀번호" autocomplete="off">
   <button class="login-btn" onclick="adminLogin()">로그인</button>
   <div class="login-error" id="loginError"></div>
+  <div class="login-note">비밀번호는 SHA-256 해시 후 전송됩니다.<br>세션 토큰으로 안전하게 인증합니다.</div>
 </div>
 
-<!-- Admin Panel -->
 <div id="adminPanel">
   <a href="/" class="btn-back">← 메인으로</a>
   <h1>Trade<span>Scope</span> Admin</h1>
-  <div class="subtitle">초대 코드 관리</div>
+  <div class="subtitle">초대 코드 관리 · 영구 저장</div>
 
   <div class="section">
     <div class="section-title">새 코드 생성</div>
@@ -127,27 +121,47 @@ tr:hover td{background:var(--card)}
 
 <script>
 const API = '/.netlify/functions/invite';
-let adminPassword = '';
+let adminToken = '';
 
 document.getElementById('adminPw').addEventListener('keydown', e => { if (e.key === 'Enter') adminLogin(); });
 
+// SHA-256 hash in browser
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 async function adminLogin() {
-  adminPassword = document.getElementById('adminPw').value;
-  if (!adminPassword) { document.getElementById('loginError').textContent = '비밀번호를 입력하세요'; return; }
+  const pw = document.getElementById('adminPw').value;
+  if (!pw) { document.getElementById('loginError').textContent = '비밀번호를 입력하세요'; return; }
   try {
+    const passwordHash = await sha256(pw);
     const res = await fetch(API, {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ action: 'admin_list', password: adminPassword })
+      body: JSON.stringify({ action: 'admin_login', passwordHash })
     });
     const data = await res.json();
     if (data.error) { document.getElementById('loginError').textContent = data.error; return; }
+    adminToken = data.token;
+    sessionStorage.setItem('adminToken', adminToken);
     document.getElementById('loginPanel').style.display = 'none';
     document.getElementById('adminPanel').style.display = 'block';
-    renderCodes(data.codes);
+    refreshList();
   } catch(e) {
     document.getElementById('loginError').textContent = '서버 연결 실패';
   }
 }
+
+// Auto-restore session
+(function() {
+  const saved = sessionStorage.getItem('adminToken');
+  if (saved) {
+    adminToken = saved;
+    document.getElementById('loginPanel').style.display = 'none';
+    document.getElementById('adminPanel').style.display = 'block';
+    refreshList();
+  }
+})();
 
 function renderCodes(codes) {
   const tbody = document.getElementById('codesTable');
@@ -177,14 +191,12 @@ async function createCode() {
   const expiresAt = document.getElementById('newExpiry').value;
   const maxDailyStr = document.getElementById('newMaxDaily').value;
   if (!code) { document.getElementById('createMsg').textContent = '코드를 입력하세요'; return; }
-
-  const payload = { action: 'admin_create', password: adminPassword, code, plan, expiresAt };
+  const payload = { action: 'admin_create', token: adminToken, code, plan, expiresAt };
   if (maxDailyStr !== '') payload.maxDaily = parseInt(maxDailyStr);
-
   try {
     const res = await fetch(API, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
     const data = await res.json();
-    if (data.error) { document.getElementById('createMsg').innerHTML = `<span style="color:var(--red)">${data.error}</span>`; return; }
+    if (data.error) { handleAuthError(data); document.getElementById('createMsg').innerHTML = `<span style="color:var(--red)">${data.error}</span>`; return; }
     document.getElementById('createMsg').innerHTML = `<span style="color:var(--green)">생성 완료: ${code.toUpperCase()}</span>`;
     document.getElementById('newCode').value = '';
     refreshList();
@@ -194,16 +206,20 @@ async function createCode() {
 async function deleteCode(code) {
   if (!confirm(`"${code}" 코드를 삭제하시겠습니까?`)) return;
   try {
-    await fetch(API, { method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ action: 'admin_delete', password: adminPassword, code }) });
+    const res = await fetch(API, { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action: 'admin_delete', token: adminToken, code }) });
+    const data = await res.json();
+    if (data.error) handleAuthError(data);
     refreshList();
   } catch(e) {}
 }
 
 async function toggleCode(code, active) {
   try {
-    await fetch(API, { method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ action: 'admin_update', password: adminPassword, code, active }) });
+    const res = await fetch(API, { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ action: 'admin_update', token: adminToken, code, active }) });
+    const data = await res.json();
+    if (data.error) handleAuthError(data);
     refreshList();
   } catch(e) {}
 }
@@ -211,17 +227,28 @@ async function toggleCode(code, active) {
 async function updateExpiry(code, expiresAt) {
   try {
     await fetch(API, { method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ action: 'admin_update', password: adminPassword, code, expiresAt }) });
+      body: JSON.stringify({ action: 'admin_update', token: adminToken, code, expiresAt }) });
   } catch(e) {}
 }
 
 async function refreshList() {
   try {
     const res = await fetch(API, { method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ action: 'admin_list', password: adminPassword }) });
+      body: JSON.stringify({ action: 'admin_list', token: adminToken }) });
     const data = await res.json();
+    if (data.error) { handleAuthError(data); return; }
     if (data.codes) renderCodes(data.codes);
   } catch(e) {}
+}
+
+function handleAuthError(data) {
+  if (data.error && (data.error.includes('인증') || data.error.includes('만료'))) {
+    adminToken = '';
+    sessionStorage.removeItem('adminToken');
+    document.getElementById('adminPanel').style.display = 'none';
+    document.getElementById('loginPanel').style.display = 'block';
+    document.getElementById('loginError').textContent = '세션이 만료되었습니다. 다시 로그인하세요.';
+  }
 }
 </script>
 </body>
