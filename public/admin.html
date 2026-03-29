@@ -76,7 +76,7 @@ tr:hover td{background:var(--card)}
 <div id="adminPanel">
   <a href="/" class="btn-back">← 메인으로</a>
   <h1>Trade<span>Scope</span> Admin</h1>
-  <div class="subtitle">초대 코드 관리 · 영구 저장</div>
+  <div class="subtitle">초대 코드 관리 · <span id="storageStatus" style="color:var(--muted)">연결 중...</span></div>
 
   <div class="section">
     <div class="section-title">새 코드 생성</div>
@@ -238,6 +238,15 @@ async function refreshList() {
     const data = await res.json();
     if (data.error) { handleAuthError(data); return; }
     if (data.codes) renderCodes(data.codes);
+    // Show storage status
+    const ss = document.getElementById('storageStatus');
+    if (data.storage === 'blobs') {
+      ss.textContent = '영구 저장 (Blobs)';
+      ss.style.color = 'var(--green)';
+    } else {
+      ss.textContent = '임시 저장 (Memory)';
+      ss.style.color = 'var(--yellow)';
+    }
   } catch(e) {}
 }
 
