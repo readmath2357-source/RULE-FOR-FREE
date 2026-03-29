@@ -1,6 +1,6 @@
 // netlify/functions/invite.js
 // Persistent invite code management
-// Storage: Netlify Blobs GLOBAL store (persists across deploys)
+// Storage: Netlify Blobs (primary) → in-memory fallback
 // Admin auth: HMAC session tokens
 
 const crypto = require('crypto');
@@ -63,55 +63,31 @@ const DEFAULT_CODES = {
 let memoryDB = null;
 let memoryUsage = {};
 
-// ── Get GLOBAL blob store (persists across deploys) ──
-function getGlobalStore() {
-  const siteID = process.env.SITE_ID;
-  const token = process.env.NETLIFY_API_TOKEN;
-
-  if (!siteID || !token) {
-    console.warn('[invite] SITE_ID or NETLIFY_API_TOKEN missing — cannot use global Blobs');
-    return null;
-  }
-
-  try {
-    return getStore({
-      name: 'invite-codes',
-      siteID,
-      token,
-      consistency: 'strong'
-    });
-  } catch (err) {
-    console.error('[invite] getStore error:', err.message);
-    return null;
-  }
-}
-
 // ── Storage abstraction ──
 async function loadCodes() {
   if (blobsAvailable) {
-    const store = getGlobalStore();
-    if (store) {
-      try {
-        const raw = await store.get('all-codes', { type: 'text' });
-        if (raw && typeof raw === 'string') {
-          console.log('[invite] Loaded from global Blobs OK');
-          const codes = JSON.parse(raw);
-          memoryDB = codes;
-          return codes;
-        }
-        // First run → seed defaults
-        console.log('[invite] No blob data, seeding defaults to global store');
-        await store.set('all-codes', JSON.stringify(DEFAULT_CODES));
-        memoryDB = { ...DEFAULT_CODES };
-        return memoryDB;
-      } catch (err) {
-        console.error('[invite] Blobs loadCodes error:', err.message || err);
+    try {
+      const store = getStore('invite-codes');
+      const raw = await store.get('all-codes', { type: 'text' });
+      if (raw && typeof raw === 'string') {
+        console.log('[invite] Loaded codes from Blobs OK');
+        const codes = JSON.parse(raw);
+        memoryDB = codes;
+        return codes;
       }
+      // No data yet → seed defaults
+      console.log('[invite] No blob data found, seeding defaults');
+      await store.set('all-codes', JSON.stringify(DEFAULT_CODES));
+      memoryDB = { ...DEFAULT_CODES };
+      return memoryDB;
+    } catch (err) {
+      console.error('[invite] Blobs loadCodes error:', err.message || err);
+      // Don't permanently disable - retry next call
     }
   }
   // Fallback: in-memory
   if (!memoryDB) {
-    console.log('[invite] Fallback to in-memory defaults');
+    console.log('[invite] Using in-memory defaults');
     memoryDB = { ...DEFAULT_CODES };
   }
   return memoryDB;
@@ -120,30 +96,26 @@ async function loadCodes() {
 async function saveCodes(codes) {
   memoryDB = codes;
   if (blobsAvailable) {
-    const store = getGlobalStore();
-    if (store) {
-      try {
-        await store.set('all-codes', JSON.stringify(codes));
-        console.log('[invite] Saved to global Blobs OK');
-        return 'blobs';
-      } catch (err) {
-        console.error('[invite] Blobs saveCodes error:', err.message || err);
-      }
+    try {
+      const store = getStore('invite-codes');
+      await store.set('all-codes', JSON.stringify(codes));
+      console.log('[invite] Saved codes to Blobs OK');
+      return true;
+    } catch (err) {
+      console.error('[invite] Blobs saveCodes error:', err.message || err);
     }
   }
-  return 'memory';
+  return false;
 }
 
 async function getUsage(day) {
   if (blobsAvailable) {
-    const store = getGlobalStore();
-    if (store) {
-      try {
-        const raw = await store.get(`usage:${day}`, { type: 'text' });
-        if (raw && typeof raw === 'string') return JSON.parse(raw);
-      } catch (err) {
-        console.error('[invite] Blobs getUsage error:', err.message || err);
-      }
+    try {
+      const store = getStore('invite-codes');
+      const raw = await store.get(`usage:${day}`, { type: 'text' });
+      if (raw && typeof raw === 'string') return JSON.parse(raw);
+    } catch (err) {
+      console.error('[invite] Blobs getUsage error:', err.message || err);
     }
   }
   return memoryUsage[day] || {};
@@ -152,27 +124,17 @@ async function getUsage(day) {
 async function setUsage(day, usage) {
   memoryUsage[day] = usage;
   if (blobsAvailable) {
-    const store = getGlobalStore();
-    if (store) {
-      try {
-        await store.set(`usage:${day}`, JSON.stringify(usage));
-      } catch (err) {
-        console.error('[invite] Blobs setUsage error:', err.message || err);
-      }
+    try {
+      const store = getStore('invite-codes');
+      await store.set(`usage:${day}`, JSON.stringify(usage));
+    } catch (err) {
+      console.error('[invite] Blobs setUsage error:', err.message || err);
     }
   }
 }
 
 function todayKey() {
   return new Date().toISOString().split('T')[0];
-}
-
-function getStorageType() {
-  if (!blobsAvailable) return 'memory';
-  const siteID = process.env.SITE_ID;
-  const token = process.env.NETLIFY_API_TOKEN;
-  if (!siteID || !token) return 'memory';
-  return 'blobs';
 }
 
 // ── Handler ──
@@ -271,7 +233,7 @@ exports.handler = async (event) => {
         statusCode: 200, headers,
         body: JSON.stringify({
           codes: list,
-          storage: getStorageType(),
+          storage: blobsAvailable ? 'blobs' : 'memory',
           totalCodes: list.length
         })
       };
@@ -301,7 +263,7 @@ exports.handler = async (event) => {
       const saved = await saveCodes(codes);
       return {
         statusCode: 200, headers,
-        body: JSON.stringify({ success: true, code: newCode, storage: saved })
+        body: JSON.stringify({ success: true, code: newCode, storage: saved ? 'blobs' : 'memory' })
       };
     }
 
