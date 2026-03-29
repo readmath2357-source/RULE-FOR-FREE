@@ -1,6 +1,7 @@
 // netlify/functions/analyze.js
-// Dual-mode analysis: simple (single entry) vs strategic (1st/2nd entries)
-// TSI & RSI are PRIMARY indicators; Volume & ICT are SUPPLEMENTARY
+// Dual-mode analysis: simple (entry→TP/SL) vs complex (4 scenarios with split positions)
+// Internal: TSI & RSI are PRIMARY; Volume & ICT are SUPPLEMENTARY
+// External: labels are abstracted (추세, 모멘텀, 거래강도, 수요공급)
 
 const headers = {
   'Content-Type': 'application/json',
@@ -37,36 +38,35 @@ const SYSTEM_BASE = `You are an expert technical analyst. You analyze price acti
 - Rising volume with trend = continuation confirmation
 - Declining volume = exhaustion warning
 - Volume spikes at key levels = institutional activity
-- Use volume to CONFIRM signals from TSI/RSI, not to generate them
 
 ### 4. ICT CONCEPTS — SUPPLEMENTARY
 - Order Blocks (OB): institutional supply/demand zones
 - Fair Value Gaps (FVG): imbalance zones price tends to fill
-- Liquidity zones: stop-loss clusters (above swing highs, below swing lows)
+- Liquidity zones: stop-loss clusters
 - Break of Structure (BOS) / Change of Character (CHoCH)
 - Premium/Discount zones (above/below 50% of swing range)
-- Use ICT to REFINE entry/exit levels identified by TSI/RSI
 
 ## CONFLUENCE SCORING
-Primary indicators (TSI + RSI) determine direction:
-- Both agree = trade direction confirmed
-- Only one signals = wait for confirmation or reduce size
-Supplementary indicators (Volume + ICT) modify confidence:
-- Both confirm = HIGH confidence
-- One confirms = MODERATE confidence
-- Neither confirms = LOW confidence
+Primary indicators (TSI + RSI) determine direction.
+Supplementary indicators (Volume + ICT) modify confidence.
 
-IMPORTANT:
-- Entry, StopLoss, TakeProfit must be realistic based on actual data
+IMPORTANT OUTPUT RULES:
 - For LONG: entry < takeProfit, stopLoss < entry
 - For SHORT: entry > takeProfit, stopLoss > entry
-- All explanations in Korean
-- Keep comments concise`;
+- All text output must be in Korean
+- Keep comments concise
+- NEVER mention "TSI", "RSI", "ICT", "Order Block", "FVG", "BOS" in user-facing text
+- Use abstract terms instead: 추세(trend), 모멘텀(momentum), 거래강도(strength), 수요존/공급존(demand/supply zone), 지지선/저항선
+- In the "summary" section, map indicators to abstract labels:
+  - TSI → "trend" (추세 방향)
+  - RSI → "momentum" (모멘텀)  
+  - Volume → "strength" (거래 강도)
+  - ICT → "zone" (수요·공급 구간)`;
 
 const SIMPLE_PROMPT_SUFFIX = `
 
-## OUTPUT FORMAT — SIMPLE MODE
-Single entry/exit. Respond in valid JSON only, no markdown, no backticks:
+## OUTPUT FORMAT — SIMPLE MODE (단순 전략)
+Single entry with one TP and one SL. Respond in valid JSON only, no markdown, no backticks:
 {
   "mode": "simple",
   "direction": "LONG" or "SHORT" or "HOLD",
@@ -75,79 +75,104 @@ Single entry/exit. Respond in valid JSON only, no markdown, no backticks:
   "stopLoss": <number>,
   "takeProfit": <number>,
   "riskReward": "<string like 1:2.5>",
-  "comment": "<one-line Korean summary, under 80 chars>",
-  "indicators": {
-    "tsi": {"signal": "BULLISH"/"BEARISH"/"NEUTRAL", "value": <num>, "signalLine": <num>, "detail": "<Korean>"},
-    "rsi": {"signal": "BULLISH"/"BEARISH"/"NEUTRAL", "value": <num>, "sma": <num>, "detail": "<Korean>"},
-    "volume": {"signal": "BULLISH"/"BEARISH"/"NEUTRAL", "detail": "<Korean>"},
-    "ict": {"signal": "BULLISH"/"BEARISH"/"NEUTRAL", "detail": "<Korean>", "patterns": ["OB","FVG","BOS"...]}
-  },
-  "ictOverlay": {
-    "orderBlocks": [{"type":"bullish"/"bearish","high":<n>,"low":<n>,"index":<n>}],
-    "fvg": [{"type":"bullish"/"bearish","high":<n>,"low":<n>,"index":<n>}],
-    "liquidityZones": [{"price":<n>,"type":"buy_side"/"sell_side"}],
-    "bos": [{"price":<n>,"type":"bullish"/"bearish","index":<n>}]
+  "comment": "<one-line Korean summary, under 80 chars, NO indicator names>",
+  "summary": {
+    "trend": {"signal": "BULLISH"/"BEARISH"/"NEUTRAL", "detail": "<Korean, abstract, no indicator names>"},
+    "momentum": {"signal": "BULLISH"/"BEARISH"/"NEUTRAL", "detail": "<Korean, abstract>"},
+    "strength": {"signal": "BULLISH"/"BEARISH"/"NEUTRAL", "detail": "<Korean, abstract>"},
+    "zone": {"signal": "BULLISH"/"BEARISH"/"NEUTRAL", "detail": "<Korean, describe demand/supply zones abstractly>"}
   }
-}`;
+}
+
+REMEMBER: In "detail" fields and "comment", use ONLY abstract Korean terms.
+- Good: "상승 추세 전환 초기 단계", "과매도 구간에서 반등 기대", "매도 압력 완화 중"
+- Bad: "TSI가 시그널 라인 위로 상승", "RSI 35.5로 과매도", "ICT OB 구간"`;
 
 const STRATEGIC_PROMPT_SUFFIX = `
 
-## OUTPUT FORMAT — STRATEGIC MODE
-Multi-stage entry (1st/2nd) based on indicator levels. Respond in valid JSON only:
+## OUTPUT FORMAT — COMPLEX MODE (복합 전략)
+Provide entry + 2 TPs + 2 SLs and 4 scenarios. Respond in valid JSON only:
 {
   "mode": "strategic",
   "direction": "LONG" or "SHORT" or "HOLD",
   "confidence": "HIGH" or "MODERATE" or "LOW",
-  "stages": [
+  "holdCondition": "<Korean: ONLY when direction is HOLD. e.g. '65,000 지지선까지 하락 시 매수 진입 권장' or '72,000 돌파 시 매수 포지션 진입'. Must specify exact price and position.>",
+  "levels": {
+    "entry": <number>,
+    "tp1": <number - 1st take profit>,
+    "tp2": <number - 2nd take profit, further from entry>,
+    "sl1": <number - 1st stop loss>,
+    "sl2": <number - 2nd stop loss, further from entry>,
+    "demandZone": {"low": <number>, "high": <number>} or null
+  },
+  "scenarios": [
     {
-      "stage": 1,
-      "label": "1차 진입",
-      "trigger": "<Korean: what condition triggers this entry>",
-      "entry": <number>,
-      "stopLoss": <number>,
-      "takeProfit": <number>,
-      "positionSize": "50%",
-      "riskReward": "<string>",
-      "reason": "<Korean: why this level, referencing TSI/RSI primarily>"
+      "type": "best",
+      "name": "최상 시나리오",
+      "probability": "<e.g. 30%>",
+      "flow": [
+        {"type": "entry", "label": "진입", "price": <entry>, "pct": ""},
+        {"type": "tp", "label": "1차 익절", "price": <tp1>, "pct": "(50%)"},
+        {"type": "tp", "label": "2차 익절", "price": <tp2>, "pct": "(50%)"}
+      ],
+      "description": "<Korean: brief scenario description>"
     },
     {
-      "stage": 2,
-      "label": "2차 진입",
-      "trigger": "<Korean: what condition triggers this entry>",
-      "entry": <number>,
-      "stopLoss": <number>,
-      "takeProfit": <number>,
-      "positionSize": "50%",
-      "riskReward": "<string>",
-      "reason": "<Korean: why this level>"
+      "type": "partial_win",
+      "name": "부분 익절 시나리오",
+      "probability": "<e.g. 35%>",
+      "flow": [
+        {"type": "entry", "label": "진입", "price": <entry>, "pct": ""},
+        {"type": "tp", "label": "1차 익절", "price": <tp1>, "pct": "(50%)"},
+        {"type": "sl", "label": "1차 손절", "price": <sl1>, "pct": "(50%)"}
+      ],
+      "description": "<Korean>"
+    },
+    {
+      "type": "partial_loss",
+      "name": "부분 손절 시나리오",
+      "probability": "<e.g. 20%>",
+      "flow": [
+        {"type": "entry", "label": "진입", "price": <entry>, "pct": ""},
+        {"type": "sl", "label": "1차 손절", "price": <sl1>, "pct": "(50%)"},
+        {"type": "tp", "label": "1차 익절", "price": <tp1>, "pct": "(50%)"}
+      ],
+      "description": "<Korean>"
+    },
+    {
+      "type": "worst",
+      "name": "최악 시나리오",
+      "probability": "<e.g. 15%>",
+      "flow": [
+        {"type": "entry", "label": "진입", "price": <entry>, "pct": ""},
+        {"type": "sl", "label": "1차 손절", "price": <sl1>, "pct": "(50%)"},
+        {"type": "sl", "label": "2차 손절", "price": <sl2>, "pct": "(50%)"}
+      ],
+      "description": "<Korean>"
     }
   ],
   "exitStrategy": {
     "partialExit": "<Korean: when to take partial profit>",
     "fullExit": "<Korean: when to close entire position>",
-    "trailingStop": "<Korean: trailing stop description if applicable>"
+    "trailingStop": "<Korean: trailing stop description>"
   },
-  "comment": "<Korean summary of overall strategy, under 120 chars>",
-  "indicators": {
-    "tsi": {"signal":"BULLISH"/"BEARISH"/"NEUTRAL","value":<n>,"signalLine":<n>,"detail":"<Korean>"},
-    "rsi": {"signal":"BULLISH"/"BEARISH"/"NEUTRAL","value":<n>,"sma":<n>,"detail":"<Korean>"},
-    "volume": {"signal":"BULLISH"/"BEARISH"/"NEUTRAL","detail":"<Korean>"},
-    "ict": {"signal":"BULLISH"/"BEARISH"/"NEUTRAL","detail":"<Korean>","patterns":["OB","FVG"...]}
-  },
-  "ictOverlay": {
-    "orderBlocks": [{"type":"bullish"/"bearish","high":<n>,"low":<n>,"index":<n>}],
-    "fvg": [{"type":"bullish"/"bearish","high":<n>,"low":<n>,"index":<n>}],
-    "liquidityZones": [{"price":<n>,"type":"buy_side"/"sell_side"}],
-    "bos": [{"price":<n>,"type":"bullish"/"bearish","index":<n>}]
+  "comment": "<Korean summary of strategy, under 120 chars, NO indicator names>",
+  "summary": {
+    "trend": {"signal": "BULLISH"/"BEARISH"/"NEUTRAL", "detail": "<Korean, abstract>"},
+    "momentum": {"signal": "BULLISH"/"BEARISH"/"NEUTRAL", "detail": "<Korean, abstract>"},
+    "strength": {"signal": "BULLISH"/"BEARISH"/"NEUTRAL", "detail": "<Korean, abstract>"},
+    "zone": {"signal": "BULLISH"/"BEARISH"/"NEUTRAL", "detail": "<Korean, describe demand/supply zones>"}
   }
 }
 
-STRATEGIC MODE RULES:
-- 1st entry: triggered by TSI signal line crossover or RSI-SMA crossover
-- 2nd entry: triggered by price reaching ICT key level (OB, FVG, liquidity) with TSI/RSI confirmation
-- If only 1 stage is appropriate (clear one-shot entry), still provide stage 2 as a "pullback re-entry" level
-- Each stage's stopLoss should be based on ICT structure (below OB for long, above OB for short)
-- Position sizing: 50% each stage (total = 100%)`;
+COMPLEX MODE RULES:
+- 4 scenarios must be provided (best / partial_win / partial_loss / worst)
+- Probabilities should sum to ~100%
+- For LONG: entry < tp1 < tp2, sl2 < sl1 < entry
+- For SHORT: entry > tp1 > tp2, sl2 > sl1 > entry
+- Each scenario uses 50%/50% split positions
+- If direction is HOLD: provide holdCondition with specific price + position recommendation, and set levels to null, scenarios to empty array
+- NEVER use TSI/RSI/ICT/OB/FVG/BOS in user-facing text — use abstract Korean terms only`;
 
 // ── Indicator calculations ──
 function calcRSI(closes, length = 21) {
@@ -232,7 +257,7 @@ exports.handler = async (event) => {
     const avgVol = volumes.slice(-20).reduce((a, b) => a + b, 0) / 20;
     const recVol = volumes.slice(-5).reduce((a, b) => a + b, 0) / 5;
 
-    const prompt = `Analyze this ${symbol} ${timeframe} chart. Mode: ${isStrategic ? 'STRATEGIC (multi-stage entry)' : 'SIMPLE (single entry)'}.
+    const prompt = `Analyze this ${symbol} ${timeframe} chart. Mode: ${isStrategic ? 'COMPLEX (복합 전략 — 4 scenarios with split positions)' : 'SIMPLE (단순 전략 — single entry/exit)'}.
 
 CURRENT PRIMARY INDICATORS:
 - TSI(13,8,8): ${tsiData.tsi[last]?.toFixed(2) || 'N/A'}
@@ -253,6 +278,8 @@ ${JSON.stringify(recentCandles)}
 Recent TSI (last 10): ${tsiData.tsi.slice(-10).map(v => v?.toFixed(2)).join(', ')}
 Recent TSI Signal (last 10): ${tsiData.signal.slice(-10).map(v => v?.toFixed(2)).join(', ')}
 Recent RSI (last 10): ${rsiValues.slice(-10).map(v => v?.toFixed(2)).join(', ')}
+
+CRITICAL REMINDER: In ALL user-facing text (comment, detail, description, holdCondition), NEVER use technical indicator names. Use abstract Korean terms only.
 
 Respond as JSON only.`;
 
@@ -289,6 +316,7 @@ Respond as JSON only.`;
       return { statusCode: 200, headers, body: JSON.stringify({ error: 'AI 응답 파싱 실패', raw: textContent.substring(0, 500) }) };
     }
 
+    // Attach calculated indicators (internal use, not displayed to user by name)
     analysis.calculatedIndicators = {
       rsi: rsiValues[last], rsiSMA: rsiSMA[last],
       tsi: tsiData.tsi[last], tsiSignal: tsiData.signal[last],
