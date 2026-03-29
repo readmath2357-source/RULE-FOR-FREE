@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TradeScope AI — 차트 분석 플랫폼</title>
+<title>RFF — AI 차트 분석 플랫폼</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
@@ -28,8 +28,7 @@ input,select{font-family:inherit;outline:none}
 /* ===== INVITE SCREEN ===== */
 #inviteScreen{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--bg)}
 .invite-container{text-align:center;max-width:420px;width:90%;animation:fadeUp .6s ease}
-.invite-logo{font-family:var(--mono);font-size:2rem;font-weight:700;color:var(--accent);margin-bottom:.5rem;letter-spacing:-1px}
-.invite-logo span{color:var(--text)}
+.invite-logo{font-family:var(--mono);font-size:2.4rem;font-weight:700;color:var(--accent);margin-bottom:.5rem;letter-spacing:2px}
 .invite-sub{color:var(--muted);margin-bottom:2.5rem;font-size:.9rem}
 .invite-input-wrap input{width:100%;padding:14px 18px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--mono);font-size:1rem;text-align:center;letter-spacing:3px;text-transform:uppercase;transition:border-color .3s;margin-bottom:1rem}
 .invite-input-wrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
@@ -43,8 +42,7 @@ input,select{font-family:inherit;outline:none}
 /* ===== MAIN APP ===== */
 #app{display:none}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:var(--bg2);border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap}
-.topbar-logo{font-family:var(--mono);font-weight:700;font-size:1.1rem;color:var(--accent);white-space:nowrap}
-.topbar-logo span{color:var(--text)}
+.topbar-logo{font-family:var(--mono);font-weight:700;font-size:1.2rem;color:var(--accent);white-space:nowrap;letter-spacing:2px}
 .topbar-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .topbar-plan{font-size:.75rem;padding:3px 10px;border-radius:20px;font-weight:600}
 .topbar-uses{font-size:.75rem;color:var(--muted);font-family:var(--mono)}
@@ -108,7 +106,39 @@ input,select{font-family:inherit;outline:none}
 .result-comment{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;font-size:.9rem;color:var(--text2);line-height:1.6;margin-bottom:12px}
 .result-comment strong{color:var(--text)}
 
-/* Strategic stages */
+/* Scenario cards for complex strategy */
+.scenarios-wrap{margin-bottom:12px}
+.scenario-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:8px;position:relative}
+.scenario-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:var(--r) 0 0 var(--r)}
+.scenario-best::before{background:var(--green)}
+.scenario-partial-win::before{background:var(--blue)}
+.scenario-partial-loss::before{background:var(--yellow)}
+.scenario-worst::before{background:var(--red)}
+.scenario-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.scenario-label{font-family:var(--mono);font-weight:700;font-size:.85rem}
+.scenario-best .scenario-label{color:var(--green)}
+.scenario-partial-win .scenario-label{color:var(--blue)}
+.scenario-partial-loss .scenario-label{color:var(--yellow)}
+.scenario-worst .scenario-label{color:var(--red)}
+.scenario-prob{font-size:.75rem;color:var(--muted);font-family:var(--mono);margin-left:auto}
+
+.scenario-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.flow-step{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:4px;font-size:.8rem;font-family:var(--mono);font-weight:500}
+.flow-entry{background:rgba(59,130,246,.15);color:var(--blue)}
+.flow-tp{background:rgba(34,197,94,.15);color:var(--green)}
+.flow-sl{background:rgba(239,68,68,.15);color:var(--red)}
+.flow-arrow{color:var(--muted);font-size:.7rem}
+.flow-pct{font-size:.65rem;color:var(--muted);margin-left:2px}
+
+.scenario-desc{font-size:.8rem;color:var(--text2);padding-top:6px;border-top:1px solid var(--border)}
+
+/* Hold recommendation */
+.hold-card{background:var(--card);border:1px solid var(--yellow);border-radius:var(--r);padding:16px;margin-bottom:12px;text-align:center}
+.hold-icon{font-size:1.5rem;margin-bottom:8px}
+.hold-title{font-size:1rem;font-weight:700;color:var(--yellow);margin-bottom:8px}
+.hold-condition{font-size:.9rem;color:var(--text);line-height:1.6}
+
+/* Stage cards (complex strategy entry levels) */
 .stages-wrap{margin-bottom:12px}
 .stage-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:8px;position:relative}
 .stage-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:var(--r) 0 0 var(--r)}
@@ -131,16 +161,15 @@ input,select{font-family:inherit;outline:none}
 .exit-row{font-size:.8rem;color:var(--text2);margin-bottom:4px}
 .exit-row strong{color:var(--text);font-weight:500}
 
-/* Indicators */
-.indicator-section-title{font-size:.7rem;color:var(--muted);text-transform:uppercase;font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;margin-top:4px}
-.indicator-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px}
-.ind-card{background:var(--input);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;position:relative}
-.ind-card.primary::after{content:'PRIMARY';position:absolute;top:4px;right:6px;font-size:.5rem;color:var(--accent);font-family:var(--mono);letter-spacing:1px;opacity:.7}
-.ind-card.supplementary::after{content:'SUB';position:absolute;top:4px;right:6px;font-size:.5rem;color:var(--muted);font-family:var(--mono);letter-spacing:1px;opacity:.5}
-.ind-name{font-size:.7rem;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:1px}
-.ind-signal{font-size:.85rem;font-weight:600;margin:4px 0 2px}
-.ind-signal.bull{color:var(--green)}.ind-signal.bear{color:var(--red)}.ind-signal.neutral{color:var(--yellow)}
-.ind-detail{font-size:.75rem;color:var(--text2)}
+/* Analysis summary (abstract, no indicator names) */
+.analysis-summary{margin-top:12px}
+.analysis-summary-title{font-size:.7rem;color:var(--muted);text-transform:uppercase;font-family:var(--mono);letter-spacing:1px;margin-bottom:8px}
+.summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px}
+.summary-card{background:var(--input);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px}
+.summary-name{font-size:.7rem;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.summary-signal{font-size:.85rem;font-weight:600;margin:4px 0 2px}
+.summary-signal.bull{color:var(--green)}.summary-signal.bear{color:var(--red)}.summary-signal.neutral{color:var(--yellow)}
+.summary-detail{font-size:.75rem;color:var(--text2)}
 
 /* Disclaimer */
 .disclaimer{padding:12px 20px;text-align:center;font-size:.7rem;color:var(--muted);border-top:1px solid var(--border);background:var(--bg2);line-height:1.5}
@@ -154,6 +183,7 @@ input,select{font-family:inherit;outline:none}
   .result-grid{grid-template-columns:1fr 1fr}
   .stage-grid{grid-template-columns:repeat(2,1fr)}
   .ctrl-input{width:100px}.ctrl-date{width:110px}
+  .scenario-flow{gap:4px}
 }
 </style>
 </head>
@@ -162,7 +192,7 @@ input,select{font-family:inherit;outline:none}
 <!-- INVITE SCREEN -->
 <div id="inviteScreen">
   <div class="invite-container">
-    <div class="invite-logo">Trade<span>Scope</span></div>
+    <div class="invite-logo">RFF</div>
     <div class="invite-sub">AI 기반 차트 분석 플랫폼</div>
     <div class="invite-input-wrap">
       <input type="text" id="inviteInput" placeholder="초대 코드 입력" maxlength="30" autocomplete="off" spellcheck="false">
@@ -176,7 +206,7 @@ input,select{font-family:inherit;outline:none}
 <!-- MAIN APP -->
 <div id="app">
   <div class="topbar">
-    <div class="topbar-logo">Trade<span>Scope</span> <span style="font-size:.7rem;color:var(--muted);font-weight:400">AI</span></div>
+    <div class="topbar-logo">RFF <span style="font-size:.7rem;color:var(--muted);font-weight:400">AI</span></div>
     <div class="topbar-controls">
       <span class="topbar-plan" id="planBadge"></span>
       <span class="topbar-uses" id="usesDisplay"></span>
@@ -184,7 +214,7 @@ input,select{font-family:inherit;outline:none}
     </div>
   </div>
 
-  <!-- Controls row 1: market/symbol/timeframe -->
+  <!-- Controls row -->
   <div class="controls">
     <div class="ctrl-group">
       <span class="ctrl-label">마켓</span>
@@ -228,10 +258,10 @@ input,select{font-family:inherit;outline:none}
   <!-- Mode toggle bar -->
   <div class="mode-bar" id="modeBar" style="display:none">
     <div class="mode-toggle" id="modeToggle">
-      <button class="active" data-mode="simple" onclick="setMode('simple')">간단 매매</button>
-      <button data-mode="strategic" onclick="setMode('strategic')">전략 매매</button>
+      <button class="active" data-mode="simple" onclick="setMode('simple')">단순 전략</button>
+      <button data-mode="strategic" onclick="setMode('strategic')">복합 전략</button>
     </div>
-    <span class="mode-desc" id="modeDesc">단일 진입/청산</span>
+    <span class="mode-desc" id="modeDesc">진입 → 익절 / 손절</span>
     <span class="mode-locked" id="modeLocked" style="display:none"></span>
   </div>
 
@@ -257,19 +287,33 @@ input,select{font-family:inherit;outline:none}
     <div id="simpleResults">
       <div class="result-grid">
         <div class="result-card"><div class="result-card-label">방향</div><div class="result-card-value" id="resDirection">—</div><div class="result-card-detail" id="resConfidence"></div></div>
-        <div class="result-card"><div class="result-card-label">진입가</div><div class="result-card-value" id="resEntry" style="color:var(--green)">—</div></div>
-        <div class="result-card"><div class="result-card-label">익절가</div><div class="result-card-value" id="resTP" style="color:var(--blue)">—</div></div>
+        <div class="result-card"><div class="result-card-label">진입가</div><div class="result-card-value" id="resEntry" style="color:var(--blue)">—</div></div>
+        <div class="result-card"><div class="result-card-label">익절가</div><div class="result-card-value" id="resTP" style="color:var(--green)">—</div></div>
         <div class="result-card"><div class="result-card-label">손절가</div><div class="result-card-value" id="resSL" style="color:var(--red)">—</div></div>
         <div class="result-card"><div class="result-card-label">리스크:리워드</div><div class="result-card-value" id="resRR" style="color:var(--cyan)">—</div></div>
       </div>
     </div>
 
-    <!-- Strategic mode results -->
+    <!-- Complex (strategic) mode results -->
     <div id="strategicResults" style="display:none">
       <div class="result-grid" style="margin-bottom:12px">
         <div class="result-card"><div class="result-card-label">방향</div><div class="result-card-value" id="resDirection2">—</div><div class="result-card-detail" id="resConfidence2"></div></div>
       </div>
+
+      <!-- Hold recommendation (shown when direction is HOLD) -->
+      <div id="holdCard" class="hold-card" style="display:none">
+        <div class="hold-icon">⏸</div>
+        <div class="hold-title">관망 권장</div>
+        <div class="hold-condition" id="holdCondition"></div>
+      </div>
+
+      <!-- Price levels -->
       <div class="stages-wrap" id="stagesWrap"></div>
+
+      <!-- Scenarios -->
+      <div class="scenarios-wrap" id="scenariosWrap"></div>
+
+      <!-- Exit strategy -->
       <div class="exit-card" id="exitCard" style="display:none">
         <div class="exit-title">청산 전략</div>
         <div id="exitContent"></div>
@@ -278,9 +322,11 @@ input,select{font-family:inherit;outline:none}
 
     <div class="result-comment" id="resComment"></div>
 
-    <!-- Indicators (shared) -->
-    <div class="indicator-section-title">주요 지표 (TSI · RSI = PRIMARY)</div>
-    <div class="indicator-row" id="indicatorRow"></div>
+    <!-- Analysis summary (abstract terms, no indicator names) -->
+    <div class="analysis-summary" id="analysisSummary">
+      <div class="analysis-summary-title">분석 요약</div>
+      <div class="summary-row" id="summaryRow"></div>
+    </div>
   </div>
 
   <div class="disclaimer">
@@ -393,14 +439,12 @@ function setupModeBar() {
   const btns = document.querySelectorAll('#modeToggle button');
 
   if (currentPlan === 'free') {
-    // Free: simple only
     currentMode = 'simple';
     btns[1].disabled = true;
     btns[1].style.opacity = '.3';
-    locked.textContent = '전략 매매는 스탠다드 이상 플랜에서 사용 가능';
+    locked.textContent = '복합 전략은 스탠다드 이상 플랜에서 사용 가능';
     locked.style.display = 'inline';
   } else {
-    // Standard & Pro: both modes
     btns[1].disabled = false;
     btns[1].style.opacity = '1';
     locked.style.display = 'none';
@@ -415,8 +459,7 @@ function setMode(mode) {
     b.classList.toggle('active', b.dataset.mode === mode);
   });
   const desc = document.getElementById('modeDesc');
-  desc.textContent = mode === 'simple' ? '단일 진입/청산' : '1차·2차 분할 매매';
-  // Hide results on mode switch
+  desc.textContent = mode === 'simple' ? '진입 → 익절 / 손절' : '분할 매매 · 시나리오별 대응';
   document.getElementById('resultPanel').classList.add('result-hidden');
 }
 
@@ -443,7 +486,7 @@ function initChart() {
   }).observe(container);
 }
 
-// ===== LOAD DATA (date-based) =====
+// ===== LOAD DATA =====
 async function loadData() {
   const symbol = document.getElementById('symbolInput').value.trim();
   const market = document.getElementById('marketSelect').value;
@@ -504,21 +547,95 @@ function updateDateInfo() {
   document.getElementById('dateInfo').textContent = `${first} ~ ${last} · ${allCandles.length}개 캔들`;
 }
 
-// ===== PRICE LINES =====
+// ===== PRICE LINES — semi-transparent box style =====
 function clearPriceLines() {
   priceLines.forEach(l => { try { candleSeries.removePriceLine(l); } catch {} });
   priceLines = [];
   try { candleSeries.setMarkers([]); } catch {}
 }
-function addPriceLine(price, color, title) {
-  const line = candleSeries.createPriceLine({ price, color, lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title });
+
+function addPriceBox(price, color, title) {
+  // Create a "box" effect using a thick semi-transparent line
+  const line = candleSeries.createPriceLine({
+    price: price,
+    color: color,
+    lineWidth: 3,
+    lineStyle: 0,
+    axisLabelVisible: true,
+    title: title,
+    lineVisible: true,
+  });
   priceLines.push(line);
+
+  // Add a second slightly offset line for thickness effect
+  const offset = price * 0.001; // 0.1% offset for box thickness
+  const bgLine = candleSeries.createPriceLine({
+    price: price + offset,
+    color: color.replace(/[\d.]+\)$/, '0.08)').replace('#', ''),
+    lineWidth: 2,
+    lineStyle: 0,
+    axisLabelVisible: false,
+    title: '',
+    lineVisible: true,
+  });
+  priceLines.push(bgLine);
+
+  const bgLine2 = candleSeries.createPriceLine({
+    price: price - offset,
+    color: color.replace(/[\d.]+\)$/, '0.08)'),
+    lineWidth: 2,
+    lineStyle: 0,
+    axisLabelVisible: false,
+    title: '',
+    lineVisible: true,
+  });
+  priceLines.push(bgLine2);
+}
+
+// Simpler box: just use wider lines with semi-transparent colors
+function addPriceZone(price, hexColor, title) {
+  // Main visible line - semi-transparent, wider
+  const alphaColor = hexColor + '99'; // ~60% opacity
+  const bgColor = hexColor + '22'; // ~13% opacity for band
+  const spread = price * 0.0015; // 0.15% spread for box height
+
+  // Top edge
+  const top = candleSeries.createPriceLine({
+    price: price + spread,
+    color: bgColor,
+    lineWidth: 1,
+    lineStyle: 2,
+    axisLabelVisible: false,
+    title: '',
+  });
+  priceLines.push(top);
+
+  // Center line (main)
+  const center = candleSeries.createPriceLine({
+    price: price,
+    color: alphaColor,
+    lineWidth: 2,
+    lineStyle: 0,
+    axisLabelVisible: true,
+    title: title,
+  });
+  priceLines.push(center);
+
+  // Bottom edge
+  const bottom = candleSeries.createPriceLine({
+    price: price - spread,
+    color: bgColor,
+    lineWidth: 1,
+    lineStyle: 2,
+    axisLabelVisible: false,
+    title: '',
+  });
+  priceLines.push(bottom);
 }
 
 // ===== AI ANALYSIS =====
 async function runAnalysis() {
   if (allCandles.length === 0) return;
-  // Verify usage
   try {
     const vr = await fetch(API_BASE + '/invite', { method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ action: 'verify', code: currentCode }) });
@@ -543,7 +660,6 @@ async function runAnalysis() {
     const data = await res.json();
     if (data.error) { setStatus(data.error, true); hideLoading(); document.getElementById('analyzeBtn').disabled = false; return; }
 
-    // Increment usage
     try {
       const ur = await fetch(API_BASE + '/invite', { method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ action: 'use', code: currentCode }) });
@@ -566,9 +682,8 @@ function displayResults(data) {
   panel.classList.remove('result-hidden');
   clearPriceLines();
 
-  const isStrategic = data.mode === 'strategic' && data.stages;
+  const isStrategic = data.mode === 'strategic';
 
-  // Toggle simple/strategic sections
   document.getElementById('simpleResults').style.display = isStrategic ? 'none' : 'block';
   document.getElementById('strategicResults').style.display = isStrategic ? 'block' : 'none';
 
@@ -581,11 +696,8 @@ function displayResults(data) {
   // Comment
   document.getElementById('resComment').innerHTML = `<strong>AI 코멘트:</strong> ${data.comment || '—'}`;
 
-  // Indicators (TSI/RSI first as primary)
-  displayIndicators(data.indicators);
-
-  // ICT overlay
-  drawICTOverlay(data.ictOverlay);
+  // Analysis summary (abstract — no TSI/RSI/ICT names)
+  displaySummary(data.summary);
 
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -597,15 +709,16 @@ function displaySimpleResults(data) {
   const dirEl = document.getElementById('resDirection');
   dirEl.textContent = dirMap[data.direction] || data.direction;
   dirEl.className = 'result-card-value ' + (dirClass[data.direction] || '');
-  document.getElementById('resConfidence').textContent = `신뢰도: ${data.confidence || '—'}`;
+  document.getElementById('resConfidence').textContent = `확률: ${data.confidence || '—'}`;
   document.getElementById('resEntry').textContent = fmt(data.entry);
   document.getElementById('resTP').textContent = fmt(data.takeProfit);
   document.getElementById('resSL').textContent = fmt(data.stopLoss);
   document.getElementById('resRR').textContent = data.riskReward || '—';
 
-  if (data.entry) addPriceLine(data.entry, '#22c55e', '진입 ' + fmt(data.entry));
-  if (data.takeProfit) addPriceLine(data.takeProfit, '#3b82f6', '익절 ' + fmt(data.takeProfit));
-  if (data.stopLoss) addPriceLine(data.stopLoss, '#ef4444', '손절 ' + fmt(data.stopLoss));
+  // Draw price zones (box style) — entry, TP, SL only
+  if (data.entry) addPriceZone(data.entry, '#3b82f6', '진입 ' + fmt(data.entry));
+  if (data.takeProfit) addPriceZone(data.takeProfit, '#22c55e', '익절 ' + fmt(data.takeProfit));
+  if (data.stopLoss) addPriceZone(data.stopLoss, '#ef4444', '손절 ' + fmt(data.stopLoss));
 }
 
 function displayStrategicResults(data) {
@@ -615,36 +728,88 @@ function displayStrategicResults(data) {
   const dirEl = document.getElementById('resDirection2');
   dirEl.textContent = dirMap[data.direction] || data.direction;
   dirEl.className = 'result-card-value ' + (dirClass[data.direction] || '');
-  document.getElementById('resConfidence2').textContent = `신뢰도: ${data.confidence || '—'}`;
+  document.getElementById('resConfidence2').textContent = `확률: ${data.confidence || '—'}`;
 
-  // Stages
+  // Hold recommendation
+  const holdCard = document.getElementById('holdCard');
+  if (data.direction === 'HOLD' && data.holdCondition) {
+    holdCard.style.display = 'block';
+    document.getElementById('holdCondition').textContent = data.holdCondition;
+  } else {
+    holdCard.style.display = 'none';
+  }
+
+  // Price level cards
   const wrap = document.getElementById('stagesWrap');
   wrap.innerHTML = '';
-  const stageColors = ['#3b82f6', '#8b5cf6'];
-  (data.stages || []).forEach((s, i) => {
-    const card = document.createElement('div');
-    card.className = `stage-card stage-${i + 1}`;
-    card.innerHTML = `
-      <div class="stage-header">
-        <span class="stage-num">${s.label || (i + 1) + '차 진입'}</span>
-        <span class="stage-trigger">${s.trigger || ''}</span>
-      </div>
-      <div class="stage-grid">
-        <div class="stage-item"><div class="stage-item-label">진입가</div><div class="stage-item-val" style="color:var(--green)">${fmt(s.entry)}</div></div>
-        <div class="stage-item"><div class="stage-item-label">손절가</div><div class="stage-item-val" style="color:var(--red)">${fmt(s.stopLoss)}</div></div>
-        <div class="stage-item"><div class="stage-item-label">익절가</div><div class="stage-item-val" style="color:var(--blue)">${fmt(s.takeProfit)}</div></div>
-        <div class="stage-item"><div class="stage-item-label">비중</div><div class="stage-item-val" style="color:var(--cyan)">${s.positionSize || '50%'}</div></div>
-      </div>
-      ${s.reason ? `<div class="stage-reason">${s.reason}</div>` : ''}
-    `;
-    wrap.appendChild(card);
 
-    // Price lines per stage
-    const clr = stageColors[i] || '#3b82f6';
-    if (s.entry) addPriceLine(s.entry, '#22c55e', `${i+1}차 진입`);
-    if (s.stopLoss) addPriceLine(s.stopLoss, '#ef4444', `${i+1}차 손절`);
-    if (s.takeProfit) addPriceLine(s.takeProfit, clr, `${i+1}차 익절`);
-  });
+  if (data.direction !== 'HOLD' && data.levels) {
+    const lv = data.levels;
+    // Show entry, TP1, TP2, SL1, SL2 as cards
+    const levelCard = document.createElement('div');
+    levelCard.className = 'stage-card stage-1';
+    levelCard.innerHTML = `
+      <div class="stage-header">
+        <span class="stage-num">핵심 가격대</span>
+      </div>
+      <div class="stage-grid" style="grid-template-columns:repeat(5,1fr)">
+        <div class="stage-item"><div class="stage-item-label">진입가</div><div class="stage-item-val" style="color:var(--blue)">${fmt(lv.entry)}</div></div>
+        <div class="stage-item"><div class="stage-item-label">1차 익절</div><div class="stage-item-val" style="color:var(--green)">${fmt(lv.tp1)}</div></div>
+        <div class="stage-item"><div class="stage-item-label">2차 익절</div><div class="stage-item-val" style="color:var(--green)">${fmt(lv.tp2)}</div></div>
+        <div class="stage-item"><div class="stage-item-label">1차 손절</div><div class="stage-item-val" style="color:var(--red)">${fmt(lv.sl1)}</div></div>
+        <div class="stage-item"><div class="stage-item-label">2차 손절</div><div class="stage-item-val" style="color:var(--red)">${fmt(lv.sl2)}</div></div>
+      </div>
+      ${lv.demandZone ? `<div class="stage-reason">수요존: ${fmt(lv.demandZone.low)} ~ ${fmt(lv.demandZone.high)}</div>` : ''}
+    `;
+    wrap.appendChild(levelCard);
+
+    // Draw price zones on chart — entry, TPs, SLs only (no ICT)
+    if (lv.entry) addPriceZone(lv.entry, '#3b82f6', '진입');
+    if (lv.tp1) addPriceZone(lv.tp1, '#22c55e', '1차 익절');
+    if (lv.tp2) addPriceZone(lv.tp2, '#16a34a', '2차 익절');
+    if (lv.sl1) addPriceZone(lv.sl1, '#ef4444', '1차 손절');
+    if (lv.sl2) addPriceZone(lv.sl2, '#dc2626', '2차 손절');
+  }
+
+  // Scenarios
+  const scenWrap = document.getElementById('scenariosWrap');
+  scenWrap.innerHTML = '';
+
+  if (data.scenarios && data.scenarios.length > 0) {
+    data.scenarios.forEach(sc => {
+      const typeClass = {
+        'best': 'scenario-best',
+        'partial_win': 'scenario-partial-win',
+        'partial_loss': 'scenario-partial-loss',
+        'worst': 'scenario-worst'
+      }[sc.type] || 'scenario-best';
+
+      const card = document.createElement('div');
+      card.className = `scenario-card ${typeClass}`;
+
+      // Build flow visualization
+      let flowHTML = '';
+      if (sc.flow && sc.flow.length > 0) {
+        flowHTML = '<div class="scenario-flow">';
+        sc.flow.forEach((step, i) => {
+          if (i > 0) flowHTML += '<span class="flow-arrow">→</span>';
+          const stepClass = step.type === 'entry' ? 'flow-entry' : step.type === 'tp' ? 'flow-tp' : 'flow-sl';
+          flowHTML += `<span class="flow-step ${stepClass}">${step.label} ${fmt(step.price)}<span class="flow-pct">${step.pct || ''}</span></span>`;
+        });
+        flowHTML += '</div>';
+      }
+
+      card.innerHTML = `
+        <div class="scenario-header">
+          <span class="scenario-label">${sc.name}</span>
+          <span class="scenario-prob">${sc.probability || ''}</span>
+        </div>
+        ${flowHTML}
+        ${sc.description ? `<div class="scenario-desc">${sc.description}</div>` : ''}
+      `;
+      scenWrap.appendChild(card);
+    });
+  }
 
   // Exit strategy
   if (data.exitStrategy) {
@@ -661,62 +826,31 @@ function displayStrategicResults(data) {
   }
 }
 
-function displayIndicators(indicators) {
-  const row = document.getElementById('indicatorRow');
+function displaySummary(summary) {
+  const row = document.getElementById('summaryRow');
   row.innerHTML = '';
-  if (!indicators) return;
+  if (!summary) { document.getElementById('analysisSummary').style.display = 'none'; return; }
+  document.getElementById('analysisSummary').style.display = 'block';
 
-  // Order: TSI, RSI (primary) → Volume, ICT (supplementary)
-  const indList = [
-    { key: 'tsi', name: 'TSI (13,8,8)', primary: true },
-    { key: 'rsi', name: 'RSI (21)', primary: true },
-    { key: 'volume', name: '거래량', primary: false },
-    { key: 'ict', name: 'ICT', primary: false }
+  // Summary uses abstract labels: 추세 방향, 모멘텀, 거래 강도, 수요·공급 구간
+  const items = [
+    { key: 'trend', name: '추세 방향' },
+    { key: 'momentum', name: '모멘텀' },
+    { key: 'strength', name: '거래 강도' },
+    { key: 'zone', name: '수요·공급 구간' }
   ];
-  indList.forEach(ind => {
-    const d = indicators[ind.key];
+  items.forEach(item => {
+    const d = summary[item.key];
     if (!d) return;
     const sigClass = d.signal === 'BULLISH' ? 'bull' : d.signal === 'BEARISH' ? 'bear' : 'neutral';
-    const sigText = d.signal === 'BULLISH' ? '매수 강세' : d.signal === 'BEARISH' ? '매도 강세' : '중립';
-    let extra = '';
-    if (d.value !== undefined) extra = ` (${Number(d.value).toFixed(2)})`;
+    const sigText = d.signal === 'BULLISH' ? '매수 우세' : d.signal === 'BEARISH' ? '매도 우세' : '중립';
     row.innerHTML += `
-      <div class="ind-card ${ind.primary ? 'primary' : 'supplementary'}">
-        <div class="ind-name">${ind.name}</div>
-        <div class="ind-signal ${sigClass}">${sigText}${extra}</div>
-        <div class="ind-detail">${d.detail || ''}</div>
+      <div class="summary-card">
+        <div class="summary-name">${item.name}</div>
+        <div class="summary-signal ${sigClass}">${sigText}</div>
+        <div class="summary-detail">${d.detail || ''}</div>
       </div>`;
   });
-}
-
-function drawICTOverlay(overlay) {
-  if (!overlay) return;
-  if (overlay.bos && overlay.bos.length > 0) {
-    const isIntraday = ['1m','5m','15m','1h','4h'].includes(document.getElementById('tfSelect').value);
-    const markers = overlay.bos.map(b => {
-      const candle = allCandles[b.index];
-      if (!candle) return null;
-      return {
-        time: isIntraday ? candle.time : Math.floor(candle.time / 86400) * 86400,
-        position: b.type === 'bullish' ? 'belowBar' : 'aboveBar',
-        color: b.type === 'bullish' ? '#22c55e' : '#ef4444',
-        shape: b.type === 'bullish' ? 'arrowUp' : 'arrowDown',
-        text: b.type === 'bullish' ? 'BOS↑' : 'BOS↓'
-      };
-    }).filter(Boolean);
-    if (markers.length > 0) try { candleSeries.setMarkers(markers); } catch {}
-  }
-  if (overlay.orderBlocks) {
-    overlay.orderBlocks.slice(0, 3).forEach(ob => {
-      const c = ob.type === 'bullish' ? '#22c55e44' : '#ef444444';
-      addPriceLine(ob.high, c, 'OB'); addPriceLine(ob.low, c, 'OB');
-    });
-  }
-  if (overlay.liquidityZones) {
-    overlay.liquidityZones.slice(0, 2).forEach(lz => {
-      addPriceLine(lz.price, '#eab30866', lz.type === 'buy_side' ? 'BSL' : 'SSL');
-    });
-  }
 }
 
 // ===== HELPERS =====
