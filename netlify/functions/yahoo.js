@@ -1,5 +1,5 @@
 // netlify/functions/yahoo.js
-// Proxy for Yahoo Finance API - fetches OHLCV data
+// Proxy for Yahoo Finance API — supports date range via period1/period2
 
 const headers = {
   'Content-Type': 'application/json',
@@ -8,41 +8,35 @@ const headers = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
 };
 
-// Map timeframe to Yahoo Finance interval and range
-function getYahooParams(timeframe, symbol) {
+function getYahooInterval(timeframe) {
   const map = {
-    '1m':  { interval: '1m',  range: '7d' },
-    '5m':  { interval: '5m',  range: '60d' },
-    '15m': { interval: '15m', range: '60d' },
-    '1h':  { interval: '60m', range: '730d' },
-    '4h':  { interval: '60m', range: '730d' },  // we'll aggregate 4h from 1h
-    '1d':  { interval: '1d',  range: '2y' },
-    '1wk': { interval: '1wk', range: '5y' }
+    '1m': '1m', '5m': '5m', '15m': '15m',
+    '1h': '60m', '4h': '60m', '1d': '1d', '1wk': '1wk'
   };
-  return map[timeframe] || map['1d'];
+  return map[timeframe] || '1d';
 }
 
-// Convert Korean stock codes
+// Fallback range when no dates provided
+function getDefaultRange(timeframe) {
+  const map = {
+    '1m': '7d', '5m': '60d', '15m': '60d',
+    '1h': '730d', '4h': '730d', '1d': '2y', '1wk': '5y'
+  };
+  return map[timeframe] || '2y';
+}
+
 function normalizeSymbol(symbol, market) {
   symbol = symbol.trim().toUpperCase();
   if (market === 'kr_stock') {
-    // Korean stock: append .KS (KOSPI) or .KQ (KOSDAQ)
-    if (!symbol.includes('.')) {
-      symbol = symbol + '.KS';
-    }
+    if (!symbol.includes('.')) symbol += '.KS';
   } else if (market === 'crypto') {
-    if (!symbol.includes('-')) {
-      symbol = symbol + '-USD';
-    }
+    if (!symbol.includes('-')) symbol += '-USD';
   } else if (market === 'forex') {
-    if (!symbol.includes('=')) {
-      symbol = symbol + '=X';
-    }
+    if (!symbol.includes('=')) symbol += '=X';
   }
   return symbol;
 }
 
-// Aggregate 1h candles into 4h
 function aggregateTo4H(candles) {
   if (!candles || candles.length === 0) return candles;
   const result = [];
@@ -68,24 +62,29 @@ exports.handler = async (event) => {
 
   try {
     const body = JSON.parse(event.body || '{}');
-    let { symbol, market, timeframe } = body;
+    let { symbol, market, timeframe, startDate, endDate } = body;
 
     if (!symbol) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: '심볼을 입력해주세요.' }) };
     }
 
     symbol = normalizeSymbol(symbol, market);
-    const params = getYahooParams(timeframe || '1d', symbol);
     const is4H = timeframe === '4h';
-    const actualInterval = is4H ? '60m' : params.interval;
-    const actualRange = is4H ? '730d' : params.range;
+    const interval = is4H ? '60m' : getYahooInterval(timeframe || '1d');
 
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${actualInterval}&range=${actualRange}&includePrePost=false`;
+    // Build URL — use period1/period2 if dates provided, else use range
+    let url;
+    if (startDate && endDate) {
+      const p1 = Math.floor(new Date(startDate).getTime() / 1000);
+      const p2 = Math.floor(new Date(endDate + 'T23:59:59').getTime() / 1000);
+      url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&period1=${p1}&period2=${p2}&includePrePost=false`;
+    } else {
+      const range = is4H ? '730d' : getDefaultRange(timeframe || '1d');
+      url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}&includePrePost=false`;
+    }
 
     const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
     });
 
     if (!response.ok) {
@@ -95,7 +94,6 @@ exports.handler = async (event) => {
 
     const data = await response.json();
     const result = data?.chart?.result?.[0];
-
     if (!result) {
       return { statusCode: 200, headers, body: JSON.stringify({ error: '데이터를 찾을 수 없습니다. 심볼을 확인해주세요.' }) };
     }
@@ -122,19 +120,16 @@ exports.handler = async (event) => {
       }
     }
 
-    if (is4H) {
-      candles = aggregateTo4H(candles);
-    }
+    if (is4H) candles = aggregateTo4H(candles);
 
     const meta = result.meta || {};
-
     return {
       statusCode: 200, headers,
       body: JSON.stringify({
         symbol: meta.symbol || symbol,
         currency: meta.currency || 'USD',
         exchange: meta.exchangeName || '',
-        candles: candles,
+        candles,
         totalCandles: candles.length
       })
     };
