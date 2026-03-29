@@ -241,10 +241,10 @@ async function refreshList() {
     // Show storage status
     const ss = document.getElementById('storageStatus');
     if (data.storage === 'blobs') {
-      ss.textContent = '영구 저장 (Blobs)';
+      ss.textContent = '글로벌 영구 저장 (Blobs)';
       ss.style.color = 'var(--green)';
     } else {
-      ss.textContent = '임시 저장 (Memory)';
+      ss.textContent = '⚠ 임시 저장 (Memory) — NETLIFY_API_TOKEN 환경변수 필요';
       ss.style.color = 'var(--yellow)';
     }
   } catch(e) {}
