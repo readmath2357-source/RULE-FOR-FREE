@@ -16,7 +16,6 @@
 }
 body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;padding:20px}
 h1{font-family:var(--mono);font-size:1.4rem;color:var(--accent);margin-bottom:8px}
-h1 span{color:var(--text)}
 .subtitle{color:var(--muted);font-size:.85rem;margin-bottom:24px}
 button{cursor:pointer;font-family:inherit;border:none;outline:none}
 input,select{font-family:inherit;outline:none}
@@ -61,6 +60,17 @@ tr:hover td{background:var(--card)}
 .btn-back{display:inline-block;margin-bottom:16px;padding:6px 14px;background:var(--card);border:1px solid var(--border);color:var(--text2);border-radius:var(--r);font-size:.85rem;text-decoration:none}
 .btn-back:hover{border-color:var(--accent);color:var(--accent)}
 .edit-input{padding:4px 8px;background:var(--input);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:.8rem;width:110px}
+
+/* Plan info box */
+.plan-info{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:20px}
+.plan-info-title{font-family:var(--mono);font-size:.75rem;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.plan-col{padding:10px;border-radius:var(--r);border:1px solid var(--border)}
+.plan-col-name{font-weight:700;margin-bottom:6px;font-size:.9rem}
+.plan-col-free .plan-col-name{color:var(--text2)}
+.plan-col-standard .plan-col-name{color:var(--accent)}
+.plan-col-pro .plan-col-name{color:var(--purple)}
+.plan-col-detail{font-size:.75rem;color:var(--muted);line-height:1.6}
 </style>
 </head>
 <body>
@@ -70,13 +80,44 @@ tr:hover td{background:var(--card)}
   <input type="password" class="login-input" id="adminPw" placeholder="관리자 비밀번호" autocomplete="off">
   <button class="login-btn" onclick="adminLogin()">로그인</button>
   <div class="login-error" id="loginError"></div>
-  <div class="login-note">비밀번호는 SHA-256 해시 후 전송됩니다.<br>세션 토큰으로 안전하게 인증합니다.</div>
+  <div class="login-note">비밀번호는 SHA-256 해시 후 전송됩니다.</div>
 </div>
 
 <div id="adminPanel">
   <a href="/" class="btn-back">← 메인으로</a>
   <h1>RFF Admin</h1>
   <div class="subtitle">초대 코드 관리 · <span id="storageStatus" style="color:var(--muted)">연결 중...</span></div>
+
+  <!-- Plan info -->
+  <div class="plan-info">
+    <div class="plan-info-title">구독 모델 (기능 차등)</div>
+    <div class="plan-grid">
+      <div class="plan-col plan-col-free">
+        <div class="plan-col-name">체험 (Free)</div>
+        <div class="plan-col-detail">
+          단순 전략만<br>
+          일봉·주봉만<br>
+          일 3회 분석
+        </div>
+      </div>
+      <div class="plan-col plan-col-standard">
+        <div class="plan-col-name">스탠다드</div>
+        <div class="plan-col-detail">
+          단순 + 복합 전략<br>
+          모든 타임프레임<br>
+          무제한 분석
+        </div>
+      </div>
+      <div class="plan-col plan-col-pro">
+        <div class="plan-col-name">프로</div>
+        <div class="plan-col-detail">
+          모든 기능<br>
+          멀티 TF 종합 분석<br>
+          우선 분석
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="section">
     <div class="section-title">새 코드 생성</div>
@@ -88,18 +129,14 @@ tr:hover td{background:var(--card)}
       <div class="form-group">
         <label>플랜</label>
         <select id="newPlan">
-          <option value="free">무료 (5회/일)</option>
-          <option value="standard" selected>스탠다드 (20회/일)</option>
-          <option value="pro">프로 (무제한)</option>
+          <option value="free">체험 (3회/일)</option>
+          <option value="standard" selected>스탠다드 (무제한)</option>
+          <option value="pro">프로 (무제한+)</option>
         </select>
       </div>
       <div class="form-group">
         <label>만료일</label>
         <input type="date" id="newExpiry" value="2026-12-31">
-      </div>
-      <div class="form-group">
-        <label>일일 한도</label>
-        <input type="number" id="newMaxDaily" placeholder="자동" min="-1" style="width:80px">
       </div>
       <button class="create-btn" onclick="createCode()">생성</button>
     </div>
@@ -111,7 +148,7 @@ tr:hover td{background:var(--card)}
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>코드</th><th>플랜</th><th>일일한도</th><th>오늘 사용</th><th>만료일</th><th>상태</th><th>액션</th></tr>
+          <tr><th>코드</th><th>플랜</th><th>기능</th><th>오늘 사용</th><th>만료일</th><th>상태</th><th>액션</th></tr>
         </thead>
         <tbody id="codesTable"></tbody>
       </table>
@@ -125,7 +162,6 @@ let adminToken = '';
 
 document.getElementById('adminPw').addEventListener('keydown', e => { if (e.key === 'Enter') adminLogin(); });
 
-// SHA-256 hash in browser
 async function sha256(text) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -152,7 +188,6 @@ async function adminLogin() {
   }
 }
 
-// Auto-restore session
 (function() {
   const saved = sessionStorage.getItem('adminToken');
   if (saved) {
@@ -167,13 +202,18 @@ function renderCodes(codes) {
   const tbody = document.getElementById('codesTable');
   if (!codes || codes.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center">코드 없음</td></tr>'; return; }
   tbody.innerHTML = codes.map(c => {
-    const planBadge = `<span class="badge badge-${c.plan}">${{free:'무료',standard:'스탠다드',pro:'프로'}[c.plan]||c.plan}</span>`;
+    const planBadge = `<span class="badge badge-${c.plan}">${{free:'체험',standard:'스탠다드',pro:'프로'}[c.plan]||c.plan}</span>`;
     const statusBadge = c.active ? '<span class="badge badge-active">활성</span>' : '<span class="badge badge-inactive">비활성</span>';
-    const maxText = c.maxDaily < 0 ? '∞' : c.maxDaily;
+    const featureMap = {
+      free: '단순 · 일봉/주봉 · 3회',
+      standard: '전체 모드 · 전체 TF · ∞',
+      pro: '전체 + 멀티TF · ∞'
+    };
+    const featureText = featureMap[c.plan] || '—';
     return `<tr>
       <td class="code-text">${c.code}</td>
       <td>${planBadge}</td>
-      <td>${maxText}</td>
+      <td style="font-size:.75rem;color:var(--text2)">${featureText}</td>
       <td>${c.usedToday}</td>
       <td><input class="edit-input" type="date" value="${c.expiresAt}" onchange="updateExpiry('${c.code}',this.value)"></td>
       <td>${statusBadge}</td>
@@ -189,15 +229,13 @@ async function createCode() {
   const code = document.getElementById('newCode').value.trim();
   const plan = document.getElementById('newPlan').value;
   const expiresAt = document.getElementById('newExpiry').value;
-  const maxDailyStr = document.getElementById('newMaxDaily').value;
   if (!code) { document.getElementById('createMsg').textContent = '코드를 입력하세요'; return; }
   const payload = { action: 'admin_create', token: adminToken, code, plan, expiresAt };
-  if (maxDailyStr !== '') payload.maxDaily = parseInt(maxDailyStr);
   try {
     const res = await fetch(API, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
     const data = await res.json();
     if (data.error) { handleAuthError(data); document.getElementById('createMsg').innerHTML = `<span style="color:var(--red)">${data.error}</span>`; return; }
-    document.getElementById('createMsg').innerHTML = `<span style="color:var(--green)">생성 완료: ${code.toUpperCase()}</span>`;
+    document.getElementById('createMsg').innerHTML = `<span style="color:var(--green)">생성 완료: ${code.toUpperCase()} (${data.storage})</span>`;
     document.getElementById('newCode').value = '';
     refreshList();
   } catch(e) { document.getElementById('createMsg').innerHTML = '<span style="color:var(--red)">서버 오류</span>'; }
@@ -238,13 +276,12 @@ async function refreshList() {
     const data = await res.json();
     if (data.error) { handleAuthError(data); return; }
     if (data.codes) renderCodes(data.codes);
-    // Show storage status
     const ss = document.getElementById('storageStatus');
     if (data.storage === 'blobs') {
-      ss.textContent = '영구 저장 (Blobs)';
+      ss.textContent = '영구 저장 (Blobs) ✓';
       ss.style.color = 'var(--green)';
     } else {
-      ss.textContent = '임시 저장 (Memory)';
+      ss.textContent = '임시 저장 (Memory) ⚠';
       ss.style.color = 'var(--yellow)';
     }
   } catch(e) {}
