@@ -1,7 +1,7 @@
 // netlify/functions/analyze.js
-// Dual-mode analysis: simple (entry→TP/SL) vs complex (4 scenarios with split positions)
-// Internal: TSI & RSI are PRIMARY; Volume & ICT are SUPPLEMENTARY
-// External: labels are abstracted (추세, 모멘텀, 거래강도, 수요공급)
+// Dual-mode analysis: simple vs strategic
+// Output order: direction → entry timing → exit strategy → comment → summary
+// Includes counter-scenarios (what if entry price is NOT reached)
 
 const headers = {
   'Content-Type': 'application/json',
@@ -75,6 +75,11 @@ Single entry with one TP and one SL. Respond in valid JSON only, no markdown, no
   "stopLoss": <number>,
   "takeProfit": <number>,
   "riskReward": "<string like 1:2.5>",
+  "entryTiming": {
+    "condition": "<Korean: specific entry trigger condition, e.g. '1,950 지지선 도달 시 매수 진입'>",
+    "idealEntry": "<Korean: ideal scenario for entry>",
+    "alternativeAction": "<Korean: what to do if entry price is NOT reached, e.g. '1,950에 도달하지 않고 반등 시 2,050 돌파 확인 후 추격 매수 고려'>"
+  },
   "comment": "<one-line Korean summary, under 80 chars, NO indicator names>",
   "summary": {
     "trend": {"signal": "BULLISH"/"BEARISH"/"NEUTRAL", "detail": "<Korean, abstract, no indicator names>"},
@@ -84,9 +89,12 @@ Single entry with one TP and one SL. Respond in valid JSON only, no markdown, no
   }
 }
 
-REMEMBER: In "detail" fields and "comment", use ONLY abstract Korean terms.
-- Good: "상승 추세 전환 초기 단계", "과매도 구간에서 반등 기대", "매도 압력 완화 중"
-- Bad: "TSI가 시그널 라인 위로 상승", "RSI 35.5로 과매도", "ICT OB 구간"`;
+CRITICAL RULES:
+- entryTiming.condition: specific price level or condition for entry
+- entryTiming.alternativeAction: MUST describe what to do if the entry condition is NOT met. This is crucial for risk management.
+- In "detail" fields and "comment", use ONLY abstract Korean terms.
+- Good: "상승 추세 전환 초기 단계", "과매도 구간에서 반등 기대"
+- Bad: "TSI가 시그널 라인 위로 상승", "RSI 35.5로 과매도"`;
 
 const STRATEGIC_PROMPT_SUFFIX = `
 
@@ -96,13 +104,17 @@ Provide entry + 2 TPs + 2 SLs and 4 scenarios. Respond in valid JSON only:
   "mode": "strategic",
   "direction": "LONG" or "SHORT" or "HOLD",
   "confidence": "HIGH" or "MODERATE" or "LOW",
-  "holdCondition": "<Korean: ONLY when direction is HOLD. e.g. '65,000 지지선까지 하락 시 매수 진입 권장' or '72,000 돌파 시 매수 포지션 진입'. Must specify exact price and position.>",
+  "entryTiming": {
+    "condition": "<Korean: specific entry trigger, e.g. '1,950 지지선에서 반등 캔들 확인 시 진입'>",
+    "idealEntry": "<Korean: best-case entry scenario>",
+    "alternativeAction": "<Korean: what to do if entry price is NOT reached. MUST be specific with price levels. e.g. '1,950에 도달하지 않고 현재가에서 반등 시 2,050 돌파 확인 후 50% 진입, 2,100 돌파 시 나머지 50% 진입'>"
+  },
   "levels": {
     "entry": <number>,
-    "tp1": <number - 1st take profit>,
-    "tp2": <number - 2nd take profit, further from entry>,
-    "sl1": <number - 1st stop loss>,
-    "sl2": <number - 2nd stop loss, further from entry>,
+    "tp1": <number>,
+    "tp2": <number>,
+    "sl1": <number>,
+    "sl2": <number>,
     "demandZone": {"low": <number>, "high": <number>} or null
   },
   "scenarios": [
@@ -171,7 +183,8 @@ COMPLEX MODE RULES:
 - For LONG: entry < tp1 < tp2, sl2 < sl1 < entry
 - For SHORT: entry > tp1 > tp2, sl2 > sl1 > entry
 - Each scenario uses 50%/50% split positions
-- If direction is HOLD: provide holdCondition with specific price + position recommendation, and set levels to null, scenarios to empty array
+- entryTiming.alternativeAction is CRITICAL: MUST describe what to do if the entry price level is NOT reached. Include specific alternative price levels and actions.
+- If direction is HOLD: provide entryTiming with specific conditions for future entry, and set levels to null, scenarios to empty array. alternativeAction should describe the range-bound or continued-trend scenario.
 - NEVER use TSI/RSI/ICT/OB/FVG/BOS in user-facing text — use abstract Korean terms only`;
 
 // ── Indicator calculations ──
@@ -279,7 +292,10 @@ Recent TSI (last 10): ${tsiData.tsi.slice(-10).map(v => v?.toFixed(2)).join(', '
 Recent TSI Signal (last 10): ${tsiData.signal.slice(-10).map(v => v?.toFixed(2)).join(', ')}
 Recent RSI (last 10): ${rsiValues.slice(-10).map(v => v?.toFixed(2)).join(', ')}
 
-CRITICAL REMINDER: In ALL user-facing text (comment, detail, description, holdCondition), NEVER use technical indicator names. Use abstract Korean terms only.
+CRITICAL REMINDERS:
+1. In ALL user-facing text, NEVER use technical indicator names. Use abstract Korean terms only.
+2. The "entryTiming.alternativeAction" field is MANDATORY and CRITICAL. It must describe what to do if the primary entry condition is NOT met. Be specific with alternative price levels.
+3. Follow the output order: direction → entryTiming → levels → scenarios → exitStrategy → comment → summary
 
 Respond as JSON only.`;
 
@@ -316,7 +332,6 @@ Respond as JSON only.`;
       return { statusCode: 200, headers, body: JSON.stringify({ error: 'AI 응답 파싱 실패', raw: textContent.substring(0, 500) }) };
     }
 
-    // Attach calculated indicators (internal use, not displayed to user by name)
     analysis.calculatedIndicators = {
       rsi: rsiValues[last], rsiSMA: rsiSMA[last],
       tsi: tsiData.tsi[last], tsiSignal: tsiData.signal[last],
