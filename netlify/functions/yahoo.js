@@ -1,5 +1,6 @@
 // netlify/functions/yahoo.js
-// Proxy for Yahoo Finance API — supports date range via period1/period2
+// Yahoo Finance data proxy + symbol search autocomplete
+// Always fetches 2 years of data, returns last 500 candles
 
 const headers = {
   'Content-Type': 'application/json',
@@ -14,15 +15,6 @@ function getYahooInterval(timeframe) {
     '1h': '60m', '4h': '60m', '1d': '1d', '1wk': '1wk'
   };
   return map[timeframe] || '1d';
-}
-
-// Fallback range when no dates provided
-function getDefaultRange(timeframe) {
-  const map = {
-    '1m': '7d', '5m': '60d', '15m': '60d',
-    '1h': '730d', '4h': '730d', '1d': '2y', '1wk': '5y'
-  };
-  return map[timeframe] || '2y';
 }
 
 function normalizeSymbol(symbol, market) {
@@ -55,6 +47,16 @@ function aggregateTo4H(candles) {
   return result;
 }
 
+// Detect market type from Yahoo search result
+function detectMarket(quoteType, exchange, symbol) {
+  if (quoteType === 'CRYPTOCURRENCY') return 'crypto';
+  if (quoteType === 'CURRENCY' || quoteType === 'FOREX') return 'forex';
+  if (quoteType === 'FUTURE') return 'futures';
+  if (exchange && (exchange.includes('KSE') || exchange.includes('KOS') || exchange.includes('KRX'))) return 'kr_stock';
+  if (symbol && (symbol.endsWith('.KS') || symbol.endsWith('.KQ'))) return 'kr_stock';
+  return 'us_stock';
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
@@ -62,7 +64,44 @@ exports.handler = async (event) => {
 
   try {
     const body = JSON.parse(event.body || '{}');
-    let { symbol, market, timeframe, startDate, endDate } = body;
+    const { action } = body;
+
+    // ── SYMBOL SEARCH (autocomplete) ──
+    if (action === 'search') {
+      const query = (body.query || '').trim();
+      if (!query || query.length < 1) {
+        return { statusCode: 200, headers, body: JSON.stringify({ results: [] }) };
+      }
+
+      const searchUrl = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=8&newsCount=0&listsCount=0&enableFuzzyQuery=true&quotesQueryId=tss_match_phrase_query`;
+
+      const res = await fetch(searchUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+      });
+
+      if (!res.ok) {
+        return { statusCode: 200, headers, body: JSON.stringify({ results: [] }) };
+      }
+
+      const data = await res.json();
+      const quotes = data.quotes || [];
+
+      const results = quotes
+        .filter(q => q.symbol && q.quoteType !== 'OPTION' && q.quoteType !== 'MUTUALFUND')
+        .map(q => ({
+          symbol: q.symbol,
+          name: q.shortname || q.longname || q.symbol,
+          exchange: q.exchDisp || q.exchange || '',
+          type: q.quoteType || '',
+          market: detectMarket(q.quoteType, q.exchange, q.symbol)
+        }))
+        .slice(0, 6);
+
+      return { statusCode: 200, headers, body: JSON.stringify({ results }) };
+    }
+
+    // ── CHART DATA ──
+    let { symbol, market, timeframe } = body;
 
     if (!symbol) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: '심볼을 입력해주세요.' }) };
@@ -72,16 +111,15 @@ exports.handler = async (event) => {
     const is4H = timeframe === '4h';
     const interval = is4H ? '60m' : getYahooInterval(timeframe || '1d');
 
-    // Build URL — use period1/period2 if dates provided, else use range
-    let url;
-    if (startDate && endDate) {
-      const p1 = Math.floor(new Date(startDate).getTime() / 1000);
-      const p2 = Math.floor(new Date(endDate + 'T23:59:59').getTime() / 1000);
-      url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&period1=${p1}&period2=${p2}&includePrePost=false`;
-    } else {
-      const range = is4H ? '730d' : getDefaultRange(timeframe || '1d');
-      url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}&includePrePost=false`;
-    }
+    // Intraday timeframes have Yahoo limits, so adjust range accordingly
+    const isIntraday = ['1m', '5m', '15m', '1h', '4h'].includes(timeframe);
+    let range;
+    if (timeframe === '1m') range = '7d';
+    else if (timeframe === '5m' || timeframe === '15m') range = '60d';
+    else if (timeframe === '1h' || timeframe === '4h') range = '730d';
+    else range = '2y'; // 1d, 1wk → always 2 years
+
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}&includePrePost=false`;
 
     const response = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
@@ -122,15 +160,31 @@ exports.handler = async (event) => {
 
     if (is4H) candles = aggregateTo4H(candles);
 
+    // Total fetched count before slicing
+    const totalFetched = candles.length;
+
+    // Return only last 500 candles
+    const MAX_CANDLES = 500;
+    if (candles.length > MAX_CANDLES) {
+      candles = candles.slice(-MAX_CANDLES);
+    }
+
     const meta = result.meta || {};
+    const firstDate = candles.length > 0 ? new Date(candles[0].time * 1000).toISOString().split('T')[0] : '';
+    const lastDate = candles.length > 0 ? new Date(candles[candles.length - 1].time * 1000).toISOString().split('T')[0] : '';
+
     return {
       statusCode: 200, headers,
       body: JSON.stringify({
         symbol: meta.symbol || symbol,
+        name: meta.shortName || meta.longName || '',
         currency: meta.currency || 'USD',
         exchange: meta.exchangeName || '',
         candles,
-        totalCandles: candles.length
+        totalCandles: candles.length,
+        totalFetched,
+        period: { start: firstDate, end: lastDate },
+        range
       })
     };
   } catch (err) {
