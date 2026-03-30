@@ -2,6 +2,7 @@
 // Persistent invite code management
 // Storage: Netlify Blobs (primary) → in-memory fallback
 // Admin auth: HMAC session tokens
+// Subscription model: feature-based (not just daily count)
 
 const crypto = require('crypto');
 
@@ -23,6 +24,34 @@ const headers = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+};
+
+// ── Plan feature definitions ──
+const PLAN_FEATURES = {
+  free: {
+    label: '체험',
+    maxDaily: 3,
+    modes: ['simple'],                    // simple only
+    timeframes: ['1d', '1wk'],            // daily & weekly only
+    multiTF: false,
+    priority: false
+  },
+  standard: {
+    label: '스탠다드',
+    maxDaily: -1,                         // unlimited
+    modes: ['simple', 'strategic'],       // both modes
+    timeframes: ['1m','5m','15m','1h','4h','1d','1wk'], // all
+    multiTF: false,
+    priority: false
+  },
+  pro: {
+    label: '프로',
+    maxDaily: -1,                         // unlimited
+    modes: ['simple', 'strategic'],       // both modes
+    timeframes: ['1m','5m','15m','1h','4h','1d','1wk'], // all
+    multiTF: true,                        // multi-timeframe analysis
+    priority: true                        // priority processing
+  }
 };
 
 // ── Token helpers ──
@@ -54,38 +83,47 @@ function verifyPassword(inputHash) {
 
 // ── Default codes ──
 const DEFAULT_CODES = {
-  "FREE-TRIAL-2025": { plan: "free", maxDaily: 5, expiresAt: "2026-12-31", active: true },
-  "STANDARD-DEMO": { plan: "standard", maxDaily: 20, expiresAt: "2026-12-31", active: true },
-  "PRO-UNLIMITED": { plan: "pro", maxDaily: -1, expiresAt: "2026-12-31", active: true }
+  "FREE-TRIAL-2025": { plan: "free", maxDaily: 3, expiresAt: "2026-12-31", active: true, createdAt: "2025-01-01" },
+  "STANDARD-DEMO": { plan: "standard", maxDaily: -1, expiresAt: "2026-12-31", active: true, createdAt: "2025-01-01" },
+  "PRO-UNLIMITED": { plan: "pro", maxDaily: -1, expiresAt: "2026-12-31", active: true, createdAt: "2025-01-01" }
 };
 
 // ── In-memory fallback ──
 let memoryDB = null;
 let memoryUsage = {};
 
-// ── Storage abstraction ──
+// ── Storage abstraction with retry ──
+function getStoreInstance() {
+  if (!blobsAvailable) return null;
+  try {
+    return getStore({ name: 'invite-codes', consistency: 'strong' });
+  } catch (err) {
+    console.error('[invite] getStore failed:', err.message);
+    return null;
+  }
+}
+
 async function loadCodes() {
-  if (blobsAvailable) {
+  const store = getStoreInstance();
+  if (store) {
     try {
-      const store = getStore('invite-codes');
       const raw = await store.get('all-codes', { type: 'text' });
-      if (raw && typeof raw === 'string') {
-        console.log('[invite] Loaded codes from Blobs OK');
+      if (raw && typeof raw === 'string' && raw.length > 2) {
         const codes = JSON.parse(raw);
-        memoryDB = codes;
+        memoryDB = codes; // sync memory cache
+        console.log('[invite] Loaded from Blobs:', Object.keys(codes).length, 'codes');
         return codes;
       }
-      // No data yet → seed defaults
-      console.log('[invite] No blob data found, seeding defaults');
+      // No data yet → seed defaults and persist
+      console.log('[invite] No blob data, seeding defaults');
       await store.set('all-codes', JSON.stringify(DEFAULT_CODES));
       memoryDB = { ...DEFAULT_CODES };
       return memoryDB;
     } catch (err) {
       console.error('[invite] Blobs loadCodes error:', err.message || err);
-      // Don't permanently disable - retry next call
+      // Fall through to memory
     }
   }
-  // Fallback: in-memory
   if (!memoryDB) {
     console.log('[invite] Using in-memory defaults');
     memoryDB = { ...DEFAULT_CODES };
@@ -94,26 +132,37 @@ async function loadCodes() {
 }
 
 async function saveCodes(codes) {
-  memoryDB = codes;
-  if (blobsAvailable) {
+  memoryDB = codes; // always update memory
+  const store = getStoreInstance();
+  if (store) {
     try {
-      const store = getStore('invite-codes');
-      await store.set('all-codes', JSON.stringify(codes));
-      console.log('[invite] Saved codes to Blobs OK');
-      return true;
+      const json = JSON.stringify(codes);
+      await store.set('all-codes', json);
+      // Verify write by reading back
+      const verify = await store.get('all-codes', { type: 'text' });
+      if (verify && verify.length > 2) {
+        console.log('[invite] Saved & verified in Blobs:', Object.keys(codes).length, 'codes');
+        return true;
+      }
+      console.warn('[invite] Blob write verification failed');
     } catch (err) {
       console.error('[invite] Blobs saveCodes error:', err.message || err);
     }
   }
+  console.log('[invite] Saved to memory only');
   return false;
 }
 
 async function getUsage(day) {
-  if (blobsAvailable) {
+  const store = getStoreInstance();
+  if (store) {
     try {
-      const store = getStore('invite-codes');
-      const raw = await store.get(`usage:${day}`, { type: 'text' });
-      if (raw && typeof raw === 'string') return JSON.parse(raw);
+      const raw = await store.get(`usage-${day}`, { type: 'text' });
+      if (raw && typeof raw === 'string') {
+        const usage = JSON.parse(raw);
+        memoryUsage[day] = usage;
+        return usage;
+      }
     } catch (err) {
       console.error('[invite] Blobs getUsage error:', err.message || err);
     }
@@ -123,10 +172,10 @@ async function getUsage(day) {
 
 async function setUsage(day, usage) {
   memoryUsage[day] = usage;
-  if (blobsAvailable) {
+  const store = getStoreInstance();
+  if (store) {
     try {
-      const store = getStore('invite-codes');
-      await store.set(`usage:${day}`, JSON.stringify(usage));
+      await store.set(`usage-${day}`, JSON.stringify(usage));
     } catch (err) {
       console.error('[invite] Blobs setUsage error:', err.message || err);
     }
@@ -166,16 +215,57 @@ exports.handler = async (event) => {
       const today = todayKey();
       const usage = await getUsage(today);
       const usedToday = usage[code] || 0;
-      if (entry.maxDaily > 0 && usedToday >= entry.maxDaily) {
-        return { statusCode: 200, headers, body: JSON.stringify({ valid: false, error: `오늘 사용 횟수(${entry.maxDaily}회)를 초과했습니다.` }) };
+      const maxDaily = entry.maxDaily > 0 ? entry.maxDaily : (PLAN_FEATURES[entry.plan]?.maxDaily || -1);
+      if (maxDaily > 0 && usedToday >= maxDaily) {
+        return { statusCode: 200, headers, body: JSON.stringify({ valid: false, error: `오늘 사용 횟수(${maxDaily}회)를 초과했습니다.` }) };
       }
+
+      const features = PLAN_FEATURES[entry.plan] || PLAN_FEATURES.free;
       return {
         statusCode: 200, headers,
         body: JSON.stringify({
-          valid: true, plan: entry.plan, maxDaily: entry.maxDaily,
-          usedToday, remaining: entry.maxDaily > 0 ? entry.maxDaily - usedToday : '무제한'
+          valid: true,
+          plan: entry.plan,
+          maxDaily: maxDaily,
+          usedToday,
+          remaining: maxDaily > 0 ? maxDaily - usedToday : '무제한',
+          features: {
+            modes: features.modes,
+            timeframes: features.timeframes,
+            multiTF: features.multiTF,
+            priority: features.priority
+          }
         })
       };
+    }
+
+    // ── CHECK FEATURE ACCESS ──
+    if (action === 'check_feature') {
+      const code = (body.code || '').trim().toUpperCase();
+      const codes = await loadCodes();
+      const entry = codes[code];
+      if (!entry || !entry.active) {
+        return { statusCode: 200, headers, body: JSON.stringify({ allowed: false, error: '유효하지 않은 코드' }) };
+      }
+      const features = PLAN_FEATURES[entry.plan] || PLAN_FEATURES.free;
+      const requestedMode = body.mode || 'simple';
+      const requestedTF = body.timeframe || '1d';
+
+      if (!features.modes.includes(requestedMode)) {
+        return { statusCode: 200, headers, body: JSON.stringify({
+          allowed: false,
+          error: '이 기능은 스탠다드 이상 플랜에서 사용 가능합니다.',
+          requiredPlan: 'standard'
+        })};
+      }
+      if (!features.timeframes.includes(requestedTF)) {
+        return { statusCode: 200, headers, body: JSON.stringify({
+          allowed: false,
+          error: `${requestedTF} 타임프레임은 스탠다드 이상 플랜에서 사용 가능합니다.`,
+          requiredPlan: 'standard'
+        })};
+      }
+      return { statusCode: 200, headers, body: JSON.stringify({ allowed: true }) };
     }
 
     // ── USE CODE ──
@@ -192,7 +282,8 @@ exports.handler = async (event) => {
       const today = todayKey();
       const usage = await getUsage(today);
       const usedToday = usage[code] || 0;
-      if (entry.maxDaily > 0 && usedToday >= entry.maxDaily) {
+      const maxDaily = entry.maxDaily > 0 ? entry.maxDaily : (PLAN_FEATURES[entry.plan]?.maxDaily || -1);
+      if (maxDaily > 0 && usedToday >= maxDaily) {
         return { statusCode: 200, headers, body: JSON.stringify({ success: false, error: '일일 사용 한도 초과' }) };
       }
       usage[code] = usedToday + 1;
@@ -200,8 +291,8 @@ exports.handler = async (event) => {
       return {
         statusCode: 200, headers,
         body: JSON.stringify({
-          success: true, usedToday: usage[code], maxDaily: entry.maxDaily,
-          remaining: entry.maxDaily > 0 ? entry.maxDaily - usage[code] : '무제한'
+          success: true, usedToday: usage[code], maxDaily,
+          remaining: maxDaily > 0 ? maxDaily - usage[code] : '무제한'
         })
       };
     }
@@ -227,14 +318,28 @@ exports.handler = async (event) => {
       const list = Object.entries(codes).map(([code, info]) => ({
         code, plan: info.plan, maxDaily: info.maxDaily,
         expiresAt: info.expiresAt, active: info.active,
-        usedToday: usage[code] || 0
+        usedToday: usage[code] || 0,
+        createdAt: info.createdAt || '—'
       }));
+
+      // Test blob connectivity
+      let storageStatus = 'memory';
+      const store = getStoreInstance();
+      if (store) {
+        try {
+          await store.set('health-check', 'ok');
+          const check = await store.get('health-check', { type: 'text' });
+          if (check === 'ok') storageStatus = 'blobs';
+        } catch { storageStatus = 'memory'; }
+      }
+
       return {
         statusCode: 200, headers,
         body: JSON.stringify({
           codes: list,
-          storage: blobsAvailable ? 'blobs' : 'memory',
-          totalCodes: list.length
+          storage: storageStatus,
+          totalCodes: list.length,
+          planFeatures: PLAN_FEATURES
         })
       };
     }
@@ -253,12 +358,13 @@ exports.handler = async (event) => {
         return { statusCode: 400, headers, body: JSON.stringify({ error: '이미 존재하는 코드입니다.' }) };
       }
       const plan = body.plan || 'standard';
-      const defaultMax = plan === 'free' ? 5 : plan === 'standard' ? 20 : -1;
+      const features = PLAN_FEATURES[plan] || PLAN_FEATURES.standard;
       codes[newCode] = {
         plan,
-        maxDaily: body.maxDaily !== undefined ? body.maxDaily : defaultMax,
+        maxDaily: body.maxDaily !== undefined ? body.maxDaily : features.maxDaily,
         expiresAt: body.expiresAt || '2026-12-31',
-        active: true
+        active: true,
+        createdAt: todayKey()
       };
       const saved = await saveCodes(codes);
       return {
@@ -295,8 +401,8 @@ exports.handler = async (event) => {
       if (body.expiresAt) codes[code].expiresAt = body.expiresAt;
       if (body.plan) {
         codes[code].plan = body.plan;
-        const defaultMax = body.plan === 'free' ? 5 : body.plan === 'standard' ? 20 : -1;
-        codes[code].maxDaily = body.maxDaily !== undefined ? body.maxDaily : defaultMax;
+        const features = PLAN_FEATURES[body.plan] || PLAN_FEATURES.standard;
+        codes[code].maxDaily = body.maxDaily !== undefined ? body.maxDaily : features.maxDaily;
       }
       if (body.active !== undefined) codes[code].active = body.active;
       if (body.maxDaily !== undefined) codes[code].maxDaily = body.maxDaily;
