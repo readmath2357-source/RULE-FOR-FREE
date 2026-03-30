@@ -96,7 +96,12 @@ let memoryUsage = {};
 function getStoreInstance() {
   if (!blobsAvailable) return null;
   try {
-    return getStore({ name: 'invite-codes', consistency: 'strong' });
+    return getStore({
+      name: 'invite-codes',
+      siteID: process.env.SITE_ID,
+      token: process.env.NETLIFY_API_TOKEN,
+      consistency: 'strong'
+    });
   } catch (err) {
     console.error('[invite] getStore failed:', err.message);
     return null;
