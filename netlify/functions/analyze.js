@@ -66,19 +66,19 @@ IMPORTANT OUTPUT RULES:
 const SIMPLE_PROMPT_SUFFIX = `
 
 ## OUTPUT FORMAT — SIMPLE MODE (단순 전략)
-Single entry with one TP and one SL. Respond in valid JSON only, no markdown, no backticks:
+Output price ZONES (ranges), NOT exact prices. Each zone has low and high. Respond in valid JSON only, no markdown, no backticks:
 {
   "mode": "simple",
   "direction": "LONG" or "SHORT" or "HOLD",
   "confidence": "HIGH" or "MODERATE" or "LOW",
-  "entry": <number>,
-  "stopLoss": <number>,
-  "takeProfit": <number>,
+  "entryZone": {"low": <number>, "high": <number>},
+  "slZone": {"low": <number>, "high": <number>},
+  "tpZone": {"low": <number>, "high": <number>},
   "riskReward": "<string like 1:2.5>",
   "entryTiming": {
-    "condition": "<Korean: specific entry trigger condition, e.g. '1,950 지지선 도달 시 매수 진입'>",
+    "condition": "<Korean: specific entry trigger condition>",
     "idealEntry": "<Korean: ideal scenario for entry>",
-    "alternativeAction": "<Korean: what to do if entry price is NOT reached, e.g. '1,950에 도달하지 않고 반등 시 2,050 돌파 확인 후 추격 매수 고려'>"
+    "alternativeAction": "<Korean: what to do if entry zone is NOT reached>"
   },
   "comment": "<one-line Korean summary, under 80 chars, NO indicator names>",
   "summary": {
@@ -89,9 +89,11 @@ Single entry with one TP and one SL. Respond in valid JSON only, no markdown, no
   }
 }
 
-CRITICAL RULES:
-- entryTiming.condition: specific price level or condition for entry
-- entryTiming.alternativeAction: MUST describe what to do if the entry condition is NOT met. This is crucial for risk management.
+ZONE RULES:
+- Each zone width should be ~0.5~1.5% of price (e.g. price 68,300 → zone 67,900~68,700)
+- For LONG: entryZone < tpZone, slZone < entryZone
+- For SHORT: entryZone > tpZone, slZone > entryZone
+- NEVER output a single exact price — always a low/high range
 - In "detail" fields and "comment", use ONLY abstract Korean terms.
 - Good: "상승 추세 전환 초기 단계", "과매도 구간에서 반등 기대"
 - Bad: "TSI가 시그널 라인 위로 상승", "RSI 35.5로 과매도"`;
@@ -110,11 +112,11 @@ Provide entry + 2 TPs + 2 SLs and 4 scenarios. Respond in valid JSON only:
     "alternativeAction": "<Korean: what to do if entry price is NOT reached. MUST be specific with price levels. e.g. '1,950에 도달하지 않고 현재가에서 반등 시 2,050 돌파 확인 후 50% 진입, 2,100 돌파 시 나머지 50% 진입'>"
   },
   "levels": {
-    "entry": <number>,
-    "tp1": <number>,
-    "tp2": <number>,
-    "sl1": <number>,
-    "sl2": <number>,
+    "entryZone": {"low": <number>, "high": <number>},
+    "tp1Zone": {"low": <number>, "high": <number>},
+    "tp2Zone": {"low": <number>, "high": <number>},
+    "sl1Zone": {"low": <number>, "high": <number>},
+    "sl2Zone": {"low": <number>, "high": <number>},
     "demandZone": {"low": <number>, "high": <number>} or null
   },
   "scenarios": [
@@ -123,9 +125,9 @@ Provide entry + 2 TPs + 2 SLs and 4 scenarios. Respond in valid JSON only:
       "name": "최상 시나리오",
       "probability": "<e.g. 30%>",
       "flow": [
-        {"type": "entry", "label": "진입", "price": <entry>, "pct": ""},
-        {"type": "tp", "label": "1차 익절", "price": <tp1>, "pct": "(50%)"},
-        {"type": "tp", "label": "2차 익절", "price": <tp2>, "pct": "(50%)"}
+        {"type": "entry", "label": "진입", "price": <entryZone midpoint>, "pct": ""},
+        {"type": "tp", "label": "1차 참고구간", "price": <tp1Zone midpoint>, "pct": "(50%)"},
+        {"type": "tp", "label": "2차 참고구간", "price": <tp2Zone midpoint>, "pct": "(50%)"}
       ],
       "description": "<Korean: brief scenario description>"
     },
@@ -134,9 +136,9 @@ Provide entry + 2 TPs + 2 SLs and 4 scenarios. Respond in valid JSON only:
       "name": "부분 익절 시나리오",
       "probability": "<e.g. 35%>",
       "flow": [
-        {"type": "entry", "label": "진입", "price": <entry>, "pct": ""},
-        {"type": "tp", "label": "1차 익절", "price": <tp1>, "pct": "(50%)"},
-        {"type": "sl", "label": "1차 손절", "price": <sl1>, "pct": "(50%)"}
+        {"type": "entry", "label": "진입", "price": <entryZone midpoint>, "pct": ""},
+        {"type": "tp", "label": "1차 참고구간", "price": <tp1Zone midpoint>, "pct": "(50%)"},
+        {"type": "sl", "label": "1차 손절구간", "price": <sl1Zone midpoint>, "pct": "(50%)"}
       ],
       "description": "<Korean>"
     },
@@ -145,9 +147,9 @@ Provide entry + 2 TPs + 2 SLs and 4 scenarios. Respond in valid JSON only:
       "name": "부분 손절 시나리오",
       "probability": "<e.g. 20%>",
       "flow": [
-        {"type": "entry", "label": "진입", "price": <entry>, "pct": ""},
-        {"type": "sl", "label": "1차 손절", "price": <sl1>, "pct": "(50%)"},
-        {"type": "tp", "label": "1차 익절", "price": <tp1>, "pct": "(50%)"}
+        {"type": "entry", "label": "진입", "price": <entryZone midpoint>, "pct": ""},
+        {"type": "sl", "label": "1차 손절구간", "price": <sl1Zone midpoint>, "pct": "(50%)"},
+        {"type": "tp", "label": "1차 참고구간", "price": <tp1Zone midpoint>, "pct": "(50%)"}
       ],
       "description": "<Korean>"
     },
@@ -156,9 +158,9 @@ Provide entry + 2 TPs + 2 SLs and 4 scenarios. Respond in valid JSON only:
       "name": "최악 시나리오",
       "probability": "<e.g. 15%>",
       "flow": [
-        {"type": "entry", "label": "진입", "price": <entry>, "pct": ""},
-        {"type": "sl", "label": "1차 손절", "price": <sl1>, "pct": "(50%)"},
-        {"type": "sl", "label": "2차 손절", "price": <sl2>, "pct": "(50%)"}
+        {"type": "entry", "label": "진입", "price": <entryZone midpoint>, "pct": ""},
+        {"type": "sl", "label": "1차 손절구간", "price": <sl1Zone midpoint>, "pct": "(50%)"},
+        {"type": "sl", "label": "2차 손절구간", "price": <sl2Zone midpoint>, "pct": "(50%)"}
       ],
       "description": "<Korean>"
     }
@@ -178,13 +180,15 @@ Provide entry + 2 TPs + 2 SLs and 4 scenarios. Respond in valid JSON only:
 }
 
 COMPLEX MODE RULES:
+- ALL prices must be expressed as zones (low/high), NOT single numbers
+- Zone width: ~0.5~1.5% of price for crypto, ~0.3~0.8% for stocks
 - 4 scenarios must be provided (best / partial_win / partial_loss / worst)
 - Probabilities should sum to ~100%
-- For LONG: entry < tp1 < tp2, sl2 < sl1 < entry
-- For SHORT: entry > tp1 > tp2, sl2 > sl1 > entry
-- Each scenario uses 50%/50% split positions
-- entryTiming.alternativeAction is CRITICAL: MUST describe what to do if the entry price level is NOT reached. Include specific alternative price levels and actions.
-- If direction is HOLD: provide entryTiming with specific conditions for future entry, and set levels to null, scenarios to empty array. alternativeAction should describe the range-bound or continued-trend scenario.
+- For LONG: entryZone < tp1Zone < tp2Zone, sl2Zone < sl1Zone < entryZone
+- For SHORT: entryZone > tp1Zone > tp2Zone, sl2Zone > sl1Zone > entryZone
+- Each scenario uses 50%/50% split positions. Use midpoint of each zone for flow prices.
+- entryTiming.alternativeAction is CRITICAL: MUST describe what to do if the entry zone is NOT reached.
+- If direction is HOLD: set levels to null, scenarios to empty array.
 - NEVER use TSI/RSI/ICT/OB/FVG/BOS in user-facing text — use abstract Korean terms only`;
 
 // ── Indicator calculations ──
