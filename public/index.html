@@ -313,6 +313,16 @@ input,select{font-family:inherit;outline:none}
         <option value="1wk">주봉</option>
       </select>
     </div>
+    <div class="ctrl-group" id="backtestGroup" style="display:none">
+      <span class="ctrl-label" style="color:var(--yellow)">기준 날짜</span>
+      <input type="date" class="ctrl-select" id="backtestDate" style="min-width:130px;color:var(--yellow)">
+    </div>
+    <div class="ctrl-group" style="gap:4px">
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.75rem;color:var(--muted)">
+        <input type="checkbox" id="backtestToggle" style="accent-color:var(--yellow)" onchange="toggleBacktest()">
+        <span>과거 시점</span>
+      </label>
+    </div>
     <button class="ctrl-btn btn-analyze" id="analyzeBtn" onclick="runAnalysis()" disabled>AI 지표 해석</button>
     <span class="status-msg" id="statusMsg"></span>
   </div>
@@ -349,12 +359,12 @@ input,select{font-family:inherit;outline:none}
     </div>
   </div>
 
-  <!-- Info bar -->
   <div class="info-bar" id="infoBar">
     <div class="info-bar-inner">
       <span class="info-tag" id="infoSymbol"></span>
       <span class="info-tag"><span class="dot"></span> <span id="infoPeriod"></span></span>
       <span class="info-tag"><span class="dot"></span> <span id="infoCandles"></span></span>
+      <span id="backtestBadge" style="display:none;padding:2px 10px;background:rgba(234,179,8,.15);color:var(--yellow);border-radius:12px;font-size:.7rem;font-weight:600;font-family:var(--mono)">📅 백테스팅 모드</span>
     </div>
   </div>
 
@@ -429,6 +439,18 @@ let priceLines = [];
 let searchTimeout = null;
 const API_BASE = '/.netlify/functions';
 const fmt = v => v != null ? Number(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:6}) : '—';
+const fmtZone = z => z ? `${fmt(z.low)} ~ ${fmt(z.high)}` : '—';
+const zMid = z => z ? (z.low + z.high) / 2 : null;
+
+// ===== BACKTEST TOGGLE =====
+function toggleBacktest() {
+  const on = document.getElementById('backtestToggle').checked;
+  document.getElementById('backtestGroup').style.display = on ? 'flex' : 'none';
+  if (!on) {
+    const symbol = document.getElementById('symbolInput').value.trim();
+    if (symbol && allCandles.length > 0) loadData(symbol, currentMarket);
+  }
+}
 
 // ===== STATUS =====
 function setStatus(msg, isError) {
@@ -680,14 +702,19 @@ async function loadData(symbol, market) {
   symbol = symbol || document.getElementById('symbolInput').value.trim();
   market = market || currentMarket;
   const tf = document.getElementById('tfSelect').value;
+  const isBacktest = document.getElementById('backtestToggle').checked;
+  const endDate = isBacktest ? document.getElementById('backtestDate').value : null;
   if (!symbol) { setStatus('심볼을 입력하세요', true); return; }
+  if (isBacktest && !endDate) { setStatus('기준 날짜를 선택하세요', true); return; }
 
   showLoading('데이터 불러오는 중...');
   setStatus('로딩 중...');
   try {
+    const payload = { symbol, market, timeframe: tf };
+    if (endDate) payload.endDate = endDate;
     const res = await fetch(API_BASE + '/yahoo', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ symbol, market, timeframe: tf })
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
     if (data.error) { setStatus(data.error, true); hideLoading(); return; }
@@ -728,6 +755,13 @@ function updateInfoBar(data) {
   document.getElementById('infoSymbol').innerHTML = `<strong style="color:var(--accent)">${data.symbol}</strong>` + (data.name ? ` <span style="color:var(--text2)">${data.name}</span>` : '');
   document.getElementById('infoPeriod').textContent = data.period ? `${data.period.start} ~ ${data.period.end}` : '';
   document.getElementById('infoCandles').textContent = `${data.totalCandles}봉` + (data.totalFetched > data.totalCandles ? ` (전체 ${data.totalFetched}봉 중)` : '');
+  const badge = document.getElementById('backtestBadge');
+  if (data.isBacktest && data.backtestEndDate) {
+    badge.style.display = 'inline-block';
+    badge.textContent = `📅 백테스팅 — 기준 ${data.backtestEndDate}`;
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 // ===== PRICE LINES =====
@@ -736,13 +770,22 @@ function clearPriceLines() {
   priceLines = [];
 }
 
+function addZoneBand(zoneLow, zoneHigh, hexColor, title) {
+  if (!zoneLow || !zoneHigh) return;
+  const mid = (zoneLow + zoneHigh) / 2;
+  const alphaColor = hexColor + 'bb';
+  const bgColor = hexColor + '28';
+  // Top edge
+  priceLines.push(candleSeries.createPriceLine({ price: zoneHigh, color: alphaColor, lineWidth: 1, lineStyle: 1, axisLabelVisible: false, title: '' }));
+  // Mid label line
+  priceLines.push(candleSeries.createPriceLine({ price: mid, color: alphaColor, lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title }));
+  // Bottom edge
+  priceLines.push(candleSeries.createPriceLine({ price: zoneLow, color: alphaColor, lineWidth: 1, lineStyle: 1, axisLabelVisible: false, title: '' }));
+}
+
+// Legacy single-price fallback
 function addPriceZone(price, hexColor, title) {
-  const alphaColor = hexColor + '99';
-  const bgColor = hexColor + '22';
-  const spread = price * 0.0015;
-  priceLines.push(candleSeries.createPriceLine({ price: price + spread, color: bgColor, lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' }));
-  priceLines.push(candleSeries.createPriceLine({ price, color: alphaColor, lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title }));
-  priceLines.push(candleSeries.createPriceLine({ price: price - spread, color: bgColor, lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' }));
+  addZoneBand(price * 0.998, price * 1.002, hexColor, title);
 }
 
 // ===== AI ANALYSIS =====
@@ -854,36 +897,36 @@ function displayEntrySection(data, isStrategic) {
     strategicLv.style.display = 'block';
     const lv = data.levels;
     document.getElementById('strategicLevelsGrid').innerHTML = `
-      <div class="level-card level-entry"><div class="level-label">진입가</div><div class="level-value">${fmt(lv.entry)}</div></div>
-      <div class="level-card level-tp"><div class="level-label">1차 익절</div><div class="level-value">${fmt(lv.tp1)}</div></div>
-      <div class="level-card level-tp"><div class="level-label">2차 익절</div><div class="level-value">${fmt(lv.tp2)}</div></div>
-      <div class="level-card level-sl"><div class="level-label">1차 손절</div><div class="level-value">${fmt(lv.sl1)}</div></div>
-      <div class="level-card level-sl"><div class="level-label">2차 손절</div><div class="level-value">${fmt(lv.sl2)}</div></div>
+      <div class="level-card level-entry"><div class="level-label">진입 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(lv.entryZone)}</div></div>
+      <div class="level-card level-tp"><div class="level-label">1차 참고 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(lv.tp1Zone)}</div></div>
+      <div class="level-card level-tp"><div class="level-label">2차 참고 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(lv.tp2Zone)}</div></div>
+      <div class="level-card level-sl"><div class="level-label">1차 손절 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(lv.sl1Zone)}</div></div>
+      <div class="level-card level-sl"><div class="level-label">2차 손절 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(lv.sl2Zone)}</div></div>
     `;
-    // Draw on chart
-    if (lv.entry) addPriceZone(lv.entry, '#3b82f6', '진입');
-    if (lv.tp1) addPriceZone(lv.tp1, '#22c55e', '1차 익절');
-    if (lv.tp2) addPriceZone(lv.tp2, '#16a34a', '2차 익절');
-    if (lv.sl1) addPriceZone(lv.sl1, '#ef4444', '1차 손절');
-    if (lv.sl2) addPriceZone(lv.sl2, '#dc2626', '2차 손절');
-
-    // Demand zone
+    // Draw bands on chart
+    if (lv.entryZone) addZoneBand(lv.entryZone.low, lv.entryZone.high, '#3b82f6', '진입');
+    if (lv.tp1Zone)   addZoneBand(lv.tp1Zone.low,   lv.tp1Zone.high,   '#22c55e', '1차');
+    if (lv.tp2Zone)   addZoneBand(lv.tp2Zone.low,   lv.tp2Zone.high,   '#16a34a', '2차');
+    if (lv.sl1Zone)   addZoneBand(lv.sl1Zone.low,   lv.sl1Zone.high,   '#ef4444', '1차손절');
+    if (lv.sl2Zone)   addZoneBand(lv.sl2Zone.low,   lv.sl2Zone.high,   '#dc2626', '2차손절');
     if (lv.demandZone) {
       document.getElementById('strategicLevelsGrid').innerHTML += `
-        <div class="level-card" style="grid-column:span 2"><div class="level-label" style="color:var(--cyan)">수요존</div><div class="level-value" style="color:var(--cyan);font-size:.9rem">${fmt(lv.demandZone.low)} ~ ${fmt(lv.demandZone.high)}</div></div>
+        <div class="level-card" style="grid-column:span 2"><div class="level-label" style="color:var(--cyan)">수요존</div><div class="level-value" style="color:var(--cyan);font-size:.85rem">${fmtZone(lv.demandZone)}</div></div>
       `;
+      addZoneBand(lv.demandZone.low, lv.demandZone.high, '#06b6d4', '수요존');
     }
   } else if (!isStrategic) {
     simpleLv.style.display = 'block';
+    const ez = data.entryZone, tp = data.tpZone, sl = data.slZone;
     document.getElementById('simpleLevelsGrid').innerHTML = `
-      <div class="level-card level-entry"><div class="level-label">진입가</div><div class="level-value">${fmt(data.entry)}</div></div>
-      <div class="level-card level-tp"><div class="level-label">익절가</div><div class="level-value">${fmt(data.takeProfit)}</div></div>
-      <div class="level-card level-sl"><div class="level-label">손절가</div><div class="level-value">${fmt(data.stopLoss)}</div></div>
+      <div class="level-card level-entry"><div class="level-label">진입 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(ez)}</div></div>
+      <div class="level-card level-tp"><div class="level-label">참고 익절 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(tp)}</div></div>
+      <div class="level-card level-sl"><div class="level-label">참고 손절 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(sl)}</div></div>
       <div class="level-card level-rr"><div class="level-label">리스크:리워드</div><div class="level-value">${data.riskReward || '—'}</div></div>
     `;
-    if (data.entry) addPriceZone(data.entry, '#3b82f6', '진입 ' + fmt(data.entry));
-    if (data.takeProfit) addPriceZone(data.takeProfit, '#22c55e', '익절 ' + fmt(data.takeProfit));
-    if (data.stopLoss) addPriceZone(data.stopLoss, '#ef4444', '손절 ' + fmt(data.stopLoss));
+    if (ez) addZoneBand(ez.low, ez.high, '#3b82f6', '진입구간');
+    if (tp) addZoneBand(tp.low, tp.high, '#22c55e', '익절구간');
+    if (sl) addZoneBand(sl.low, sl.high, '#ef4444', '손절구간');
   }
 
   // Entry timing info
@@ -997,9 +1040,13 @@ function hideLoading() { document.getElementById('loadingOverlay').classList.add
 // Timeframe change → reload data if we have a symbol
 document.getElementById('tfSelect').addEventListener('change', function() {
   const symbol = document.getElementById('symbolInput').value.trim();
-  if (symbol && allCandles.length > 0) {
-    loadData(symbol, currentMarket);
-  }
+  if (symbol && allCandles.length > 0) loadData(symbol, currentMarket);
+});
+
+// Backtest date change → reload data
+document.getElementById('backtestDate').addEventListener('change', function() {
+  const symbol = document.getElementById('symbolInput').value.trim();
+  if (symbol) loadData(symbol, currentMarket);
 });
 
 document.getElementById('symbolInput').addEventListener('keydown', e => {
