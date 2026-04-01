@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RFF — AI 차트 분석 플랫폼</title>
+<title>RFF — AI 차트 데이터 해석 도구</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
@@ -24,6 +24,22 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 button{cursor:pointer;font-family:inherit;border:none;outline:none}
 input,select{font-family:inherit;outline:none}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ===== CONSENT MODAL ===== */
+#consentModal{position:fixed;inset:0;z-index:2000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.75);backdrop-filter:blur(4px)}
+#consentModal.visible{display:flex}
+.consent-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);padding:28px 28px 24px;max-width:480px;width:92%;animation:fadeUp .4s ease}
+.consent-title{font-family:var(--mono);font-size:1rem;color:var(--accent);margin-bottom:16px;font-weight:700}
+.consent-body{font-size:.82rem;color:var(--text2);line-height:1.8;margin-bottom:20px}
+.consent-body strong{color:var(--text)}
+.consent-body ul{margin:10px 0 10px 16px}
+.consent-body li{margin-bottom:6px}
+.consent-check{display:flex;align-items:flex-start;gap:10px;margin-bottom:20px;cursor:pointer}
+.consent-check input[type=checkbox]{width:16px;height:16px;margin-top:2px;accent-color:var(--accent);flex-shrink:0}
+.consent-check-label{font-size:.8rem;color:var(--text2);line-height:1.6}
+.consent-btn{width:100%;padding:13px;background:var(--accent);color:#fff;font-weight:600;border-radius:var(--r);font-size:.95rem}
+.consent-btn:disabled{opacity:.4;cursor:not-allowed}
+.consent-btn:not(:disabled):hover{background:#2563eb}
 
 /* ===== INVITE SCREEN ===== */
 #inviteScreen{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--bg)}
@@ -230,11 +246,34 @@ input,select{font-family:inherit;outline:none}
 </head>
 <body>
 
+<!-- CONSENT MODAL -->
+<div id="consentModal">
+  <div class="consent-box">
+    <div class="consent-title">서비스 이용 전 필수 확인사항</div>
+    <div class="consent-body">
+      RFF는 AI가 차트의 기술적 지표 데이터를 자동 해석하여 <strong>참고 정보를 시각화하는 소프트웨어 도구</strong>입니다.<br><br>
+      아래 내용을 반드시 확인하고 동의하신 후 이용해 주세요.
+      <ul>
+        <li>본 서비스는 <strong>투자자문업 또는 유사투자자문업 등록 서비스가 아닙니다.</strong></li>
+        <li>AI가 제공하는 모든 해석 결과는 <strong>투자 권유·추천이 아닌 참고 자료</strong>입니다.</li>
+        <li>차트 해석 결과를 그대로 따른 투자로 인한 손익의 <strong>책임은 전적으로 이용자 본인</strong>에게 있습니다.</li>
+        <li>금융투자상품은 원금 손실이 발생할 수 있으며, 손실 보전이나 이익 보장은 불가능합니다.</li>
+        <li>본 도구는 <strong>개별 투자 상담을 제공하지 않습니다.</strong></li>
+      </ul>
+    </div>
+    <label class="consent-check">
+      <input type="checkbox" id="consentCheck" onchange="toggleConsentBtn()">
+      <span class="consent-check-label">위 내용을 모두 확인하였으며, 본 서비스가 투자 권유가 아닌 <strong>참고용 데이터 해석 도구</strong>임을 이해하고 동의합니다.</span>
+    </label>
+    <button class="consent-btn" id="consentBtn" disabled onclick="acceptConsent()">동의하고 시작하기</button>
+  </div>
+</div>
+
 <!-- INVITE SCREEN -->
 <div id="inviteScreen">
   <div class="invite-container">
     <div class="invite-logo">RFF</div>
-    <div class="invite-sub">AI 기반 차트 분석 플랫폼</div>
+    <div class="invite-sub">AI 기반 차트 기술지표 해석 도구</div>
     <div class="invite-input-wrap">
       <input type="text" id="inviteInput" placeholder="초대 코드 입력" maxlength="30" autocomplete="off" spellcheck="false">
     </div>
@@ -247,7 +286,7 @@ input,select{font-family:inherit;outline:none}
 <!-- MAIN APP -->
 <div id="app">
   <div class="topbar">
-    <div class="topbar-logo">RFF <span style="font-size:.7rem;color:var(--muted);font-weight:400">AI</span></div>
+    <div class="topbar-logo">RFF <span style="font-size:.7rem;color:var(--muted);font-weight:400">chart tool</span></div>
     <div class="topbar-controls">
       <span class="topbar-plan" id="planBadge"></span>
       <span class="topbar-uses" id="usesDisplay"></span>
@@ -274,7 +313,7 @@ input,select{font-family:inherit;outline:none}
         <option value="1wk">주봉</option>
       </select>
     </div>
-    <button class="ctrl-btn btn-analyze" id="analyzeBtn" onclick="runAnalysis()" disabled>AI 분석</button>
+    <button class="ctrl-btn btn-analyze" id="analyzeBtn" onclick="runAnalysis()" disabled>AI 지표 해석</button>
     <span class="status-msg" id="statusMsg"></span>
   </div>
 
@@ -306,7 +345,7 @@ input,select{font-family:inherit;outline:none}
     <div id="chartContainer"></div>
     <div class="loading-overlay hidden" id="loadingOverlay">
       <div class="spinner"></div>
-      <div class="loading-text" id="loadingText">데이터 불러오는 중...</div>
+      <div class="loading-text" id="loadingText">지표 데이터 해석 중...</div>
     </div>
   </div>
 
@@ -324,7 +363,7 @@ input,select{font-family:inherit;outline:none}
 
     <!-- 1. DIRECTION -->
     <div class="result-section" id="sectionDirection">
-      <div class="result-section-label">방향</div>
+      <div class="result-section-label">지표 해석 방향 <span style="font-size:.6rem;color:var(--muted);font-weight:400">(참고용)</span></div>
       <div class="direction-card" id="directionCard">
         <div class="direction-icon" id="dirIcon"></div>
         <div class="direction-main">
@@ -336,7 +375,7 @@ input,select{font-family:inherit;outline:none}
 
     <!-- 2. ENTRY TIMING -->
     <div class="result-section" id="sectionEntry">
-      <div class="result-section-label">진입 시점</div>
+      <div class="result-section-label">참고 가격 구간 <span style="font-size:.6rem;color:var(--muted);font-weight:400">(투자 권유 아님)</span></div>
       <!-- Simple: price levels -->
       <div id="simpleLevels" style="display:none">
         <div class="levels-grid" id="simpleLevelsGrid"></div>
@@ -362,7 +401,7 @@ input,select{font-family:inherit;outline:none}
 
     <!-- 4. COMMENT -->
     <div class="result-section" id="sectionComment">
-      <div class="result-section-label">AI 코멘트</div>
+      <div class="result-section-label">AI 해석 요약 <span style="font-size:.6rem;color:var(--muted);font-weight:400">(참고용)</span></div>
       <div class="result-comment" id="resComment"></div>
     </div>
 
@@ -374,7 +413,8 @@ input,select{font-family:inherit;outline:none}
   </div>
 
   <div class="disclaimer">
-    본 분석은 AI 자동 해석이며 투자 조언이 아닙니다. 실거래 전 반드시 본인의 판단으로 검증하세요.
+    ⚠️ <strong>투자 위험 고지</strong> — 본 서비스는 AI가 기술적 지표 데이터를 자동 해석하는 <strong>참고용 소프트웨어 도구</strong>이며, 투자자문업 또는 유사투자자문업 등록 서비스가 아닙니다.<br>
+    모든 해석 결과는 투자 권유·추천이 아닌 참고 자료이며, 이를 근거로 한 투자 손익의 책임은 전적으로 이용자 본인에게 있습니다. 금융투자상품 투자 시 원금 손실이 발생할 수 있습니다.
   </div>
 </div>
 
@@ -395,6 +435,19 @@ function setStatus(msg, isError) {
   const el = document.getElementById('statusMsg');
   el.textContent = msg;
   el.className = 'status-msg' + (isError ? ' error' : '');
+}
+
+// ===== CONSENT MODAL =====
+let pendingAppData = null;
+
+function toggleConsentBtn() {
+  document.getElementById('consentBtn').disabled = !document.getElementById('consentCheck').checked;
+}
+
+function acceptConsent() {
+  sessionStorage.setItem('consentAccepted', '1');
+  document.getElementById('consentModal').classList.remove('visible');
+  if (pendingAppData) { _showApp(pendingAppData); pendingAppData = null; }
 }
 
 // ===== INVITE =====
@@ -428,6 +481,15 @@ async function verifyInvite() {
 }
 
 function showApp(data) {
+  if (!sessionStorage.getItem('consentAccepted')) {
+    pendingAppData = data;
+    document.getElementById('consentModal').classList.add('visible');
+    return;
+  }
+  _showApp(data);
+}
+
+function _showApp(data) {
   document.getElementById('inviteScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   const badge = document.getElementById('planBadge');
@@ -707,7 +769,7 @@ async function runAnalysis() {
   if (allCandles.length < 30) { setStatus('최소 30개 캔들이 필요합니다', true); return; }
 
   const symbol = document.getElementById('symbolInput').value.trim().toUpperCase();
-  showLoading('AI가 분석 중입니다...');
+  showLoading('AI 기술지표 해석 중...');
   setStatus('분석 요청 중...', false);
   document.getElementById('analyzeBtn').disabled = true;
 
@@ -727,7 +789,7 @@ async function runAnalysis() {
     } catch {}
 
     displayResults(data);
-    setStatus('분석 완료', false);
+    setStatus('해석 완료', false);
   } catch (err) { setStatus('분석 실패: ' + err.message, true); }
   hideLoading();
   document.getElementById('analyzeBtn').disabled = false;
@@ -768,7 +830,7 @@ function displayResults(data) {
 
 function displayDirection(data) {
   const card = document.getElementById('directionCard');
-  const dirMap = { LONG: '매수 (LONG)', SHORT: '매도 (SHORT)', HOLD: '관망 (HOLD)' };
+  const dirMap = { LONG: '상승 참고 (LONG)', SHORT: '하락 참고 (SHORT)', HOLD: '관망 참고 (HOLD)' };
   const iconMap = { LONG: '📈', SHORT: '📉', HOLD: '⏸' };
   const classMap = { LONG: 'direction-long', SHORT: 'direction-short', HOLD: 'direction-hold' };
 
