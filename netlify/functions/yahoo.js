@@ -101,7 +101,7 @@ exports.handler = async (event) => {
     }
 
     // ── CHART DATA ──
-    let { symbol, market, timeframe } = body;
+    let { symbol, market, timeframe, endDate } = body;
 
     if (!symbol) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: '심볼을 입력해주세요.' }) };
@@ -111,15 +111,31 @@ exports.handler = async (event) => {
     const is4H = timeframe === '4h';
     const interval = is4H ? '60m' : getYahooInterval(timeframe || '1d');
 
-    // Intraday timeframes have Yahoo limits, so adjust range accordingly
-    const isIntraday = ['1m', '5m', '15m', '1h', '4h'].includes(timeframe);
-    let range;
-    if (timeframe === '1m') range = '7d';
-    else if (timeframe === '5m' || timeframe === '15m') range = '60d';
-    else if (timeframe === '1h' || timeframe === '4h') range = '730d';
-    else range = '2y'; // 1d, 1wk → always 2 years
+    // Lookback days per timeframe (to ensure ~500 candles)
+    const lookbackDays = {
+      '1m': 7, '5m': 60, '15m': 60,
+      '1h': 120, '4h': 500,
+      '1d': 730, '1wk': 3650
+    };
 
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}&includePrePost=false`;
+    let url;
+    const isBacktest = !!endDate;
+    if (isBacktest) {
+      // Backtesting: fetch candles ending at endDate
+      const endUnix = Math.floor(new Date(endDate + 'T23:59:59Z').getTime() / 1000);
+      const days = lookbackDays[timeframe] || 730;
+      const startUnix = endUnix - (days * 86400);
+      url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&period1=${startUnix}&period2=${endUnix}&includePrePost=false`;
+    } else {
+      // Normal: latest data
+      const rangeMap = {
+        '1m': '7d', '5m': '60d', '15m': '60d',
+        '1h': '730d', '4h': '730d',
+        '1d': '2y', '1wk': '2y'
+      };
+      const range = rangeMap[timeframe] || '2y';
+      url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}&includePrePost=false`;
+    }
 
     const response = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
@@ -184,7 +200,8 @@ exports.handler = async (event) => {
         totalCandles: candles.length,
         totalFetched,
         period: { start: firstDate, end: lastDate },
-        range
+        isBacktest,
+        backtestEndDate: isBacktest ? endDate : null
       })
     };
   } catch (err) {
