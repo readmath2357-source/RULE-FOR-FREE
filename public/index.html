@@ -385,7 +385,7 @@ input,select{font-family:inherit;outline:none}
 
     <!-- 2. ENTRY TIMING -->
     <div class="result-section" id="sectionEntry">
-      <div class="result-section-label">참고 가격 구간 <span style="font-size:.6rem;color:var(--muted);font-weight:400">(투자 권유 아님)</span></div>
+      <div class="result-section-label">저항·지지 구간 <span style="font-size:.6rem;color:var(--muted);font-weight:400">(투자 권유 아님)</span></div>
       <!-- Simple: price levels -->
       <div id="simpleLevels" style="display:none">
         <div class="levels-grid" id="simpleLevelsGrid"></div>
@@ -770,22 +770,18 @@ function clearPriceLines() {
   priceLines = [];
 }
 
-function addZoneBand(zoneLow, zoneHigh, hexColor, title) {
-  if (!zoneLow || !zoneHigh) return;
-  const mid = (zoneLow + zoneHigh) / 2;
-  const alphaColor = hexColor + 'bb';
-  const bgColor = hexColor + '28';
-  // Top edge
-  priceLines.push(candleSeries.createPriceLine({ price: zoneHigh, color: alphaColor, lineWidth: 1, lineStyle: 1, axisLabelVisible: false, title: '' }));
-  // Mid label line
-  priceLines.push(candleSeries.createPriceLine({ price: mid, color: alphaColor, lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title }));
-  // Bottom edge
-  priceLines.push(candleSeries.createPriceLine({ price: zoneLow, color: alphaColor, lineWidth: 1, lineStyle: 1, axisLabelVisible: false, title: '' }));
+function addSingleLine(price, hexColor, title, lineStyle) {
+  if (!price) return;
+  priceLines.push(candleSeries.createPriceLine({
+    price, color: hexColor, lineWidth: 2,
+    lineStyle: lineStyle || 0,
+    axisLabelVisible: true, title
+  }));
 }
 
-// Legacy single-price fallback
-function addPriceZone(price, hexColor, title) {
-  addZoneBand(price * 0.998, price * 1.002, hexColor, title);
+// Get midpoint of a zone
+function zoneMid(zone) {
+  return zone ? (zone.low + zone.high) / 2 : null;
 }
 
 // ===== AI ANALYSIS =====
@@ -891,67 +887,80 @@ function displayEntrySection(data, isStrategic) {
   simpleLv.style.display = 'none';
   strategicLv.style.display = 'none';
 
+  // Current price as entry
+  const entryPrice = data.currentPrice || (allCandles.length > 0 ? allCandles[allCandles.length - 1].close : null);
+
   if (data.direction === 'HOLD') {
     // No price levels for HOLD
   } else if (isStrategic && data.levels) {
     strategicLv.style.display = 'block';
     const lv = data.levels;
-    document.getElementById('strategicLevelsGrid').innerHTML = `
-      <div class="level-card level-entry"><div class="level-label">진입 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(lv.entryZone)}</div></div>
-      <div class="level-card level-tp"><div class="level-label">1차 참고 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(lv.tp1Zone)}</div></div>
-      <div class="level-card level-tp"><div class="level-label">2차 참고 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(lv.tp2Zone)}</div></div>
-      <div class="level-card level-sl"><div class="level-label">1차 손절 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(lv.sl1Zone)}</div></div>
-      <div class="level-card level-sl"><div class="level-label">2차 손절 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(lv.sl2Zone)}</div></div>
-    `;
-    // Draw bands on chart
-    if (lv.entryZone) addZoneBand(lv.entryZone.low, lv.entryZone.high, '#3b82f6', '진입');
-    if (lv.tp1Zone)   addZoneBand(lv.tp1Zone.low,   lv.tp1Zone.high,   '#22c55e', '1차');
-    if (lv.tp2Zone)   addZoneBand(lv.tp2Zone.low,   lv.tp2Zone.high,   '#16a34a', '2차');
-    if (lv.sl1Zone)   addZoneBand(lv.sl1Zone.low,   lv.sl1Zone.high,   '#ef4444', '1차손절');
-    if (lv.sl2Zone)   addZoneBand(lv.sl2Zone.low,   lv.sl2Zone.high,   '#dc2626', '2차손절');
-    if (lv.demandZone) {
-      document.getElementById('strategicLevelsGrid').innerHTML += `
-        <div class="level-card" style="grid-column:span 2"><div class="level-label" style="color:var(--cyan)">수요존</div><div class="level-value" style="color:var(--cyan);font-size:.85rem">${fmtZone(lv.demandZone)}</div></div>
-      `;
-      addZoneBand(lv.demandZone.low, lv.demandZone.high, '#06b6d4', '수요존');
+    const dir = data.direction;
+
+    // Determine labels based on direction
+    // LONG: TP above = 저항, SL below = 지지
+    // SHORT: TP below = 지지, SL above = 저항
+    let tp1Label, tp2Label, sl1Label, sl2Label;
+    let tp1ChartLabel, tp2ChartLabel, sl1ChartLabel, sl2ChartLabel;
+    if (dir === 'LONG') {
+      tp1Label = '1차 저항'; tp2Label = '2차 저항';
+      sl1Label = '1차 지지'; sl2Label = '2차 지지';
+    } else {
+      tp1Label = '1차 지지'; tp2Label = '2차 지지';
+      sl1Label = '1차 저항'; sl2Label = '2차 저항';
     }
+
+    document.getElementById('strategicLevelsGrid').innerHTML = `
+      <div class="level-card level-entry"><div class="level-label">진입 (현재가)</div><div class="level-value" style="font-size:.85rem">${fmt(entryPrice)}</div></div>
+      <div class="level-card level-tp"><div class="level-label">${tp1Label}</div><div class="level-value" style="font-size:.85rem">${fmtZone(lv.tp1Zone)}</div></div>
+      <div class="level-card level-tp"><div class="level-label">${tp2Label}</div><div class="level-value" style="font-size:.85rem">${fmtZone(lv.tp2Zone)}</div></div>
+      <div class="level-card level-sl"><div class="level-label">${sl1Label}</div><div class="level-value" style="font-size:.85rem">${fmtZone(lv.sl1Zone)}</div></div>
+      <div class="level-card level-sl"><div class="level-label">${sl2Label}</div><div class="level-value" style="font-size:.85rem">${fmtZone(lv.sl2Zone)}</div></div>
+    `;
+
+    // Draw 5 single lines on chart
+    if (entryPrice) addSingleLine(entryPrice, '#3b82f6', '진입');
+    if (lv.tp1Zone) addSingleLine(zoneMid(lv.tp1Zone), '#22c55e', tp1Label);
+    if (lv.tp2Zone) addSingleLine(zoneMid(lv.tp2Zone), '#16a34a', tp2Label);
+    if (lv.sl1Zone) addSingleLine(zoneMid(lv.sl1Zone), '#ef4444', sl1Label);
+    if (lv.sl2Zone) addSingleLine(zoneMid(lv.sl2Zone), '#dc2626', sl2Label);
+
   } else if (!isStrategic) {
     simpleLv.style.display = 'block';
-    const ez = data.entryZone, tp = data.tpZone, sl = data.slZone;
+    const tp = data.tpZone, sl = data.slZone;
+    const dir = data.direction;
+
+    // Labels based on direction
+    let tpLabel, slLabel;
+    if (dir === 'LONG') {
+      tpLabel = '저항 구간'; slLabel = '지지 구간';
+    } else {
+      tpLabel = '지지 구간'; slLabel = '저항 구간';
+    }
+
     document.getElementById('simpleLevelsGrid').innerHTML = `
-      <div class="level-card level-entry"><div class="level-label">진입 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(ez)}</div></div>
-      <div class="level-card level-tp"><div class="level-label">참고 익절 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(tp)}</div></div>
-      <div class="level-card level-sl"><div class="level-label">참고 손절 구간</div><div class="level-value" style="font-size:.85rem">${fmtZone(sl)}</div></div>
+      <div class="level-card level-entry"><div class="level-label">진입 (현재가)</div><div class="level-value" style="font-size:.85rem">${fmt(entryPrice)}</div></div>
+      <div class="level-card level-tp"><div class="level-label">${tpLabel}</div><div class="level-value" style="font-size:.85rem">${fmtZone(tp)}</div></div>
+      <div class="level-card level-sl"><div class="level-label">${slLabel}</div><div class="level-value" style="font-size:.85rem">${fmtZone(sl)}</div></div>
       <div class="level-card level-rr"><div class="level-label">리스크:리워드</div><div class="level-value">${data.riskReward || '—'}</div></div>
     `;
-    if (ez) addZoneBand(ez.low, ez.high, '#3b82f6', '진입구간');
-    if (tp) addZoneBand(tp.low, tp.high, '#22c55e', '익절구간');
-    if (sl) addZoneBand(sl.low, sl.high, '#ef4444', '손절구간');
+
+    // Draw 3 single lines on chart
+    if (entryPrice) addSingleLine(entryPrice, '#3b82f6', '진입');
+    if (tp) addSingleLine(zoneMid(tp), '#22c55e', tpLabel);
+    if (sl) addSingleLine(zoneMid(sl), '#ef4444', slLabel);
   }
 
-  // Entry timing info
-  if (data.entryTiming) {
+  // Ideal scenario info (yellow warning style)
+  if (data.idealScenario || (data.entryTiming && data.entryTiming.idealEntry)) {
     timingCard.style.display = 'block';
-    let html = '';
-    if (data.entryTiming.condition) {
-      html += `<div class="timing-row">
-        <div class="timing-label">진입 조건</div>
-        <div class="timing-value">${data.entryTiming.condition}</div>
-      </div>`;
-    }
-    if (data.entryTiming.idealEntry) {
-      html += `<div class="timing-row">
-        <div class="timing-label">이상적 시나리오</div>
-        <div class="timing-value">${data.entryTiming.idealEntry}</div>
-      </div>`;
-    }
-    if (data.entryTiming.alternativeAction) {
-      html += `<div class="timing-alt">
-        <div class="timing-label">⚠ 미도달 시 대응</div>
-        <div class="timing-value">${data.entryTiming.alternativeAction}</div>
-      </div>`;
-    }
-    timingCard.innerHTML = html;
+    const scenarioText = data.idealScenario || data.entryTiming?.idealEntry || '';
+    timingCard.innerHTML = `
+      <div class="timing-alt">
+        <div class="timing-label">⚡ 이상적 시나리오</div>
+        <div class="timing-value">${scenarioText}</div>
+      </div>
+    `;
   } else {
     timingCard.style.display = 'none';
   }
