@@ -1,7 +1,8 @@
 // netlify/functions/analyze.js
 // Dual-mode analysis: simple vs strategic
 // Output order: direction → entry timing → exit strategy → comment → summary
-// Includes counter-scenarios (what if entry price is NOT reached)
+// Entry = current price (즉시 진입)
+// Labels: above entry = 저항(resistance), below entry = 지지(support)
 
 const headers = {
   'Content-Type': 'application/json',
@@ -51,8 +52,10 @@ Primary indicators (TSI + RSI) determine direction.
 Supplementary indicators (Volume + ICT) modify confidence.
 
 IMPORTANT OUTPUT RULES:
-- For LONG: entry < takeProfit, stopLoss < entry
-- For SHORT: entry > takeProfit, stopLoss > entry
+- ENTRY IS ALWAYS AT CURRENT PRICE (즉시 진입). Do NOT provide an entry zone.
+- For levels, label them relative to entry: above entry = 저항(resistance), below entry = 지지(support)
+- For LONG: TP levels are above entry → 저항, SL levels are below entry → 지지
+- For SHORT: TP levels are below entry → 지지, SL levels are above entry → 저항
 - All text output must be in Korean
 - Keep comments concise
 - NEVER mention "TSI", "RSI", "ICT", "Order Block", "FVG", "BOS" in user-facing text
@@ -66,20 +69,17 @@ IMPORTANT OUTPUT RULES:
 const SIMPLE_PROMPT_SUFFIX = `
 
 ## OUTPUT FORMAT — SIMPLE MODE (단순 전략)
-Output price ZONES (ranges), NOT exact prices. Each zone has low and high. Respond in valid JSON only, no markdown, no backticks:
+Output price ZONES (ranges), NOT exact prices. Each zone has low and high.
+ENTRY IS AT CURRENT PRICE — do NOT provide an entryZone.
+Respond in valid JSON only, no markdown, no backticks:
 {
   "mode": "simple",
   "direction": "LONG" or "SHORT" or "HOLD",
   "confidence": "HIGH" or "MODERATE" or "LOW",
-  "entryZone": {"low": <number>, "high": <number>},
   "slZone": {"low": <number>, "high": <number>},
   "tpZone": {"low": <number>, "high": <number>},
   "riskReward": "<string like 1:2.5>",
-  "entryTiming": {
-    "condition": "<Korean: specific entry trigger condition>",
-    "idealEntry": "<Korean: ideal scenario for entry>",
-    "alternativeAction": "<Korean: what to do if entry zone is NOT reached>"
-  },
+  "idealScenario": "<Korean: ideal scenario description — what the best outcome looks like from current price>",
   "comment": "<one-line Korean summary, under 80 chars, NO indicator names>",
   "summary": {
     "trend": {"signal": "BULLISH"/"BEARISH"/"NEUTRAL", "detail": "<Korean, abstract, no indicator names>"},
@@ -91,8 +91,8 @@ Output price ZONES (ranges), NOT exact prices. Each zone has low and high. Respo
 
 ZONE RULES:
 - Each zone width should be ~0.5~1.5% of price (e.g. price 68,300 → zone 67,900~68,700)
-- For LONG: entryZone < tpZone, slZone < entryZone
-- For SHORT: entryZone > tpZone, slZone > entryZone
+- For LONG: tpZone is ABOVE current price, slZone is BELOW current price
+- For SHORT: tpZone is BELOW current price, slZone is ABOVE current price
 - NEVER output a single exact price — always a low/high range
 - In "detail" fields and "comment", use ONLY abstract Korean terms.
 - Good: "상승 추세 전환 초기 단계", "과매도 구간에서 반등 기대"
@@ -101,23 +101,19 @@ ZONE RULES:
 const STRATEGIC_PROMPT_SUFFIX = `
 
 ## OUTPUT FORMAT — COMPLEX MODE (복합 전략)
-Provide entry + 2 TPs + 2 SLs and 4 scenarios. Respond in valid JSON only:
+Provide 2 TPs + 2 SLs and 4 scenarios. ENTRY IS AT CURRENT PRICE (즉시 진입).
+Label all levels relative to entry: above entry = 저항, below entry = 지지.
+Respond in valid JSON only:
 {
   "mode": "strategic",
   "direction": "LONG" or "SHORT" or "HOLD",
   "confidence": "HIGH" or "MODERATE" or "LOW",
-  "entryTiming": {
-    "condition": "<Korean: specific entry trigger, e.g. '1,950 지지선에서 반등 캔들 확인 시 진입'>",
-    "idealEntry": "<Korean: best-case entry scenario>",
-    "alternativeAction": "<Korean: what to do if entry price is NOT reached. MUST be specific with price levels. e.g. '1,950에 도달하지 않고 현재가에서 반등 시 2,050 돌파 확인 후 50% 진입, 2,100 돌파 시 나머지 50% 진입'>"
-  },
+  "idealScenario": "<Korean: ideal scenario description — what the best outcome looks like from current price. Be specific with key price levels.>",
   "levels": {
-    "entryZone": {"low": <number>, "high": <number>},
     "tp1Zone": {"low": <number>, "high": <number>},
     "tp2Zone": {"low": <number>, "high": <number>},
     "sl1Zone": {"low": <number>, "high": <number>},
-    "sl2Zone": {"low": <number>, "high": <number>},
-    "demandZone": {"low": <number>, "high": <number>} or null
+    "sl2Zone": {"low": <number>, "high": <number>}
   },
   "scenarios": [
     {
@@ -125,9 +121,9 @@ Provide entry + 2 TPs + 2 SLs and 4 scenarios. Respond in valid JSON only:
       "name": "최상 시나리오",
       "probability": "<e.g. 30%>",
       "flow": [
-        {"type": "entry", "label": "진입", "price": <entryZone midpoint>, "pct": ""},
-        {"type": "tp", "label": "1차 참고구간", "price": <tp1Zone midpoint>, "pct": "(50%)"},
-        {"type": "tp", "label": "2차 참고구간", "price": <tp2Zone midpoint>, "pct": "(50%)"}
+        {"type": "entry", "label": "진입", "price": <current price>, "pct": ""},
+        {"type": "tp", "label": "<1차 저항 or 1차 지지 — see LABEL RULES>", "price": <tp1Zone midpoint>, "pct": "(50%)"},
+        {"type": "tp", "label": "<2차 저항 or 2차 지지>", "price": <tp2Zone midpoint>, "pct": "(50%)"}
       ],
       "description": "<Korean: brief scenario description>"
     },
@@ -136,9 +132,9 @@ Provide entry + 2 TPs + 2 SLs and 4 scenarios. Respond in valid JSON only:
       "name": "부분 익절 시나리오",
       "probability": "<e.g. 35%>",
       "flow": [
-        {"type": "entry", "label": "진입", "price": <entryZone midpoint>, "pct": ""},
-        {"type": "tp", "label": "1차 참고구간", "price": <tp1Zone midpoint>, "pct": "(50%)"},
-        {"type": "sl", "label": "1차 손절구간", "price": <sl1Zone midpoint>, "pct": "(50%)"}
+        {"type": "entry", "label": "진입", "price": <current price>, "pct": ""},
+        {"type": "tp", "label": "<1차 저항 or 1차 지지>", "price": <tp1Zone midpoint>, "pct": "(50%)"},
+        {"type": "sl", "label": "<1차 저항 or 1차 지지>", "price": <sl1Zone midpoint>, "pct": "(50%)"}
       ],
       "description": "<Korean>"
     },
@@ -147,9 +143,9 @@ Provide entry + 2 TPs + 2 SLs and 4 scenarios. Respond in valid JSON only:
       "name": "부분 손절 시나리오",
       "probability": "<e.g. 20%>",
       "flow": [
-        {"type": "entry", "label": "진입", "price": <entryZone midpoint>, "pct": ""},
-        {"type": "sl", "label": "1차 손절구간", "price": <sl1Zone midpoint>, "pct": "(50%)"},
-        {"type": "tp", "label": "1차 참고구간", "price": <tp1Zone midpoint>, "pct": "(50%)"}
+        {"type": "entry", "label": "진입", "price": <current price>, "pct": ""},
+        {"type": "sl", "label": "<1차 저항 or 1차 지지>", "price": <sl1Zone midpoint>, "pct": "(50%)"},
+        {"type": "tp", "label": "<1차 저항 or 1차 지지>", "price": <tp1Zone midpoint>, "pct": "(50%)"}
       ],
       "description": "<Korean>"
     },
@@ -158,9 +154,9 @@ Provide entry + 2 TPs + 2 SLs and 4 scenarios. Respond in valid JSON only:
       "name": "최악 시나리오",
       "probability": "<e.g. 15%>",
       "flow": [
-        {"type": "entry", "label": "진입", "price": <entryZone midpoint>, "pct": ""},
-        {"type": "sl", "label": "1차 손절구간", "price": <sl1Zone midpoint>, "pct": "(50%)"},
-        {"type": "sl", "label": "2차 손절구간", "price": <sl2Zone midpoint>, "pct": "(50%)"}
+        {"type": "entry", "label": "진입", "price": <current price>, "pct": ""},
+        {"type": "sl", "label": "<1차 저항 or 1차 지지>", "price": <sl1Zone midpoint>, "pct": "(50%)"},
+        {"type": "sl", "label": "<2차 저항 or 2차 지지>", "price": <sl2Zone midpoint>, "pct": "(50%)"}
       ],
       "description": "<Korean>"
     }
@@ -179,15 +175,21 @@ Provide entry + 2 TPs + 2 SLs and 4 scenarios. Respond in valid JSON only:
   }
 }
 
+## LABEL RULES (CRITICAL):
+- Levels ABOVE entry price → 저항 (resistance): 1차 저항, 2차 저항
+- Levels BELOW entry price → 지지 (support): 1차 지지, 2차 지지
+- For LONG: tp1/tp2 are above entry → "1차 저항", "2차 저항"; sl1/sl2 are below → "1차 지지", "2차 지지"
+- For SHORT: tp1/tp2 are below entry → "1차 지지", "2차 지지"; sl1/sl2 are above → "1차 저항", "2차 저항"
+- In scenario flows, use these SAME labels (저항/지지) instead of 참고구간/손절구간
+
 COMPLEX MODE RULES:
 - ALL prices must be expressed as zones (low/high), NOT single numbers
 - Zone width: ~0.5~1.5% of price for crypto, ~0.3~0.8% for stocks
 - 4 scenarios must be provided (best / partial_win / partial_loss / worst)
 - Probabilities should sum to ~100%
-- For LONG: entryZone < tp1Zone < tp2Zone, sl2Zone < sl1Zone < entryZone
-- For SHORT: entryZone > tp1Zone > tp2Zone, sl2Zone > sl1Zone > entryZone
+- For LONG: tp1Zone < tp2Zone (both above current), sl1Zone > sl2Zone (both below current)
+- For SHORT: tp1Zone > tp2Zone (both below current), sl1Zone < sl2Zone (both above current)
 - Each scenario uses 50%/50% split positions. Use midpoint of each zone for flow prices.
-- entryTiming.alternativeAction is CRITICAL: MUST describe what to do if the entry zone is NOT reached.
 - If direction is HOLD: set levels to null, scenarios to empty array.
 - NEVER use TSI/RSI/ICT/OB/FVG/BOS in user-facing text — use abstract Korean terms only`;
 
@@ -265,6 +267,7 @@ exports.handler = async (event) => {
     const rsiSMA = calcSMA(rsiValues, 21);
     const tsiData = calcTSI(closes, 13, 8, 8);
     const last = closes.length - 1;
+    const currentPrice = closes[last];
 
     const recentCandles = candles.slice(-50).map((c, i) => ({
       idx: candles.length - 50 + i, t: c.time,
@@ -274,7 +277,9 @@ exports.handler = async (event) => {
     const avgVol = volumes.slice(-20).reduce((a, b) => a + b, 0) / 20;
     const recVol = volumes.slice(-5).reduce((a, b) => a + b, 0) / 5;
 
-    const prompt = `Analyze this ${symbol} ${timeframe} chart. Mode: ${isStrategic ? 'COMPLEX (복합 전략 — 4 scenarios with split positions)' : 'SIMPLE (단순 전략 — single entry/exit)'}.
+    const prompt = `Analyze this ${symbol} ${timeframe} chart. Mode: ${isStrategic ? 'COMPLEX (복합 전략 — 4 scenarios with split positions)' : 'SIMPLE (단순 전략 — single TP/SL)'}.
+
+CURRENT PRICE (즉시 진입 기준): ${currentPrice}
 
 CURRENT PRIMARY INDICATORS:
 - TSI(13,8,8): ${tsiData.tsi[last]?.toFixed(2) || 'N/A'}
@@ -297,9 +302,11 @@ Recent TSI Signal (last 10): ${tsiData.signal.slice(-10).map(v => v?.toFixed(2))
 Recent RSI (last 10): ${rsiValues.slice(-10).map(v => v?.toFixed(2)).join(', ')}
 
 CRITICAL REMINDERS:
-1. In ALL user-facing text, NEVER use technical indicator names. Use abstract Korean terms only.
-2. The "entryTiming.alternativeAction" field is MANDATORY and CRITICAL. It must describe what to do if the primary entry condition is NOT met. Be specific with alternative price levels.
-3. Follow the output order: direction → entryTiming → levels → scenarios → exitStrategy → comment → summary
+1. ENTRY IS AT CURRENT PRICE (${currentPrice}). Do NOT provide an entryZone. Entry is immediate.
+2. In ALL user-facing text, NEVER use technical indicator names. Use abstract Korean terms only.
+3. Label levels relative to entry: above entry = 저항, below entry = 지지.
+4. For LONG: TP above → 저항, SL below → 지지. For SHORT: TP below → 지지, SL above → 저항.
+5. Provide idealScenario describing the best expected outcome from current price.
 
 Respond as JSON only.`;
 
@@ -336,6 +343,8 @@ Respond as JSON only.`;
       return { statusCode: 200, headers, body: JSON.stringify({ error: 'AI 응답 파싱 실패', raw: textContent.substring(0, 500) }) };
     }
 
+    // Inject current price and calculated indicators
+    analysis.currentPrice = currentPrice;
     analysis.calculatedIndicators = {
       rsi: rsiValues[last], rsiSMA: rsiSMA[last],
       tsi: tsiData.tsi[last], tsiSignal: tsiData.signal[last],
