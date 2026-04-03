@@ -101,7 +101,7 @@ ZONE RULES:
 const STRATEGIC_PROMPT_SUFFIX = `
 
 ## OUTPUT FORMAT — COMPLEX MODE (복합 전략)
-Provide 2 TPs + 2 SLs and 4 scenarios. ENTRY IS AT CURRENT PRICE (즉시 진입).
+Provide 2 TPs + 2 SLs with BRANCHING scenarios (tree structure). ENTRY IS AT CURRENT PRICE (즉시 진입).
 Label all levels relative to entry: above entry = 저항, below entry = 지지.
 Respond in valid JSON only:
 {
@@ -115,52 +115,50 @@ Respond in valid JSON only:
     "sl1Zone": {"low": <number>, "high": <number>},
     "sl2Zone": {"low": <number>, "high": <number>}
   },
-  "scenarios": [
-    {
-      "type": "best",
-      "name": "최상 시나리오",
-      "probability": "<e.g. 30%>",
-      "flow": [
-        {"type": "entry", "label": "진입", "price": <current price>, "pct": ""},
-        {"type": "tp", "label": "<1차 저항 or 1차 지지 — see LABEL RULES>", "price": <tp1Zone midpoint>, "pct": "(50%)"},
-        {"type": "tp", "label": "<2차 저항 or 2차 지지>", "price": <tp2Zone midpoint>, "pct": "(50%)"}
-      ],
-      "description": "<Korean: brief scenario description>"
+  "scenarios": {
+    "profitPath": {
+      "name": "익절 경로",
+      "probability": "<total probability for this path, e.g. 65%>",
+      "trigger": {"label": "1차 익절", "price": <tp1Zone midpoint>, "pct": "(50%)"},
+      "outcomes": [
+        {
+          "name": "본전 청산",
+          "probability": "<e.g. 30%>",
+          "type": "breakeven",
+          "step": {"label": "본전", "price": <current price>, "pct": "(50%)"},
+          "description": "<Korean: brief description of this outcome>"
+        },
+        {
+          "name": "2차 익절",
+          "probability": "<e.g. 35%>",
+          "type": "tp",
+          "step": {"label": "2차 익절", "price": <tp2Zone midpoint>, "pct": "(50%)"},
+          "description": "<Korean: brief description>"
+        }
+      ]
     },
-    {
-      "type": "partial_win",
-      "name": "부분 익절 시나리오",
-      "probability": "<e.g. 35%>",
-      "flow": [
-        {"type": "entry", "label": "진입", "price": <current price>, "pct": ""},
-        {"type": "tp", "label": "<1차 저항 or 1차 지지>", "price": <tp1Zone midpoint>, "pct": "(50%)"},
-        {"type": "sl", "label": "<1차 저항 or 1차 지지>", "price": <sl1Zone midpoint>, "pct": "(50%)"}
-      ],
-      "description": "<Korean>"
-    },
-    {
-      "type": "partial_loss",
-      "name": "부분 손절 시나리오",
-      "probability": "<e.g. 20%>",
-      "flow": [
-        {"type": "entry", "label": "진입", "price": <current price>, "pct": ""},
-        {"type": "sl", "label": "<1차 저항 or 1차 지지>", "price": <sl1Zone midpoint>, "pct": "(50%)"},
-        {"type": "tp", "label": "<1차 저항 or 1차 지지>", "price": <tp1Zone midpoint>, "pct": "(50%)"}
-      ],
-      "description": "<Korean>"
-    },
-    {
-      "type": "worst",
-      "name": "최악 시나리오",
-      "probability": "<e.g. 15%>",
-      "flow": [
-        {"type": "entry", "label": "진입", "price": <current price>, "pct": ""},
-        {"type": "sl", "label": "<1차 저항 or 1차 지지>", "price": <sl1Zone midpoint>, "pct": "(50%)"},
-        {"type": "sl", "label": "<2차 저항 or 2차 지지>", "price": <sl2Zone midpoint>, "pct": "(50%)"}
-      ],
-      "description": "<Korean>"
+    "lossPath": {
+      "name": "손절 경로",
+      "probability": "<total probability for this path, e.g. 35%>",
+      "trigger": {"label": "1차 손절", "price": <sl1Zone midpoint>, "pct": "(50%)"},
+      "outcomes": [
+        {
+          "name": "1차 익절 회복",
+          "probability": "<e.g. 20%>",
+          "type": "tp",
+          "step": {"label": "1차 익절", "price": <tp1Zone midpoint>, "pct": "(50%)"},
+          "description": "<Korean: brief description>"
+        },
+        {
+          "name": "2차 손절",
+          "probability": "<e.g. 15%>",
+          "type": "sl",
+          "step": {"label": "2차 손절", "price": <sl2Zone midpoint>, "pct": "(50%)"},
+          "description": "<Korean: brief description>"
+        }
+      ]
     }
-  ],
+  },
   "exitStrategy": {
     "partialExit": "<Korean: when to take partial profit>",
     "fullExit": "<Korean: when to close entire position>",
@@ -175,22 +173,40 @@ Respond in valid JSON only:
   }
 }
 
+## BRANCHING SCENARIO RULES:
+The scenarios use a TREE structure with 2 main paths, each branching into 2 outcomes.
+
+PATH 1 — 익절 경로 (Profit Path):
+  Entry (100%) → price hits TP1 first → exit 50% at TP1 (1차 익절)
+    ├→ price returns to entry → exit remaining 50% at break-even (본전)
+    └→ price continues to TP2 → exit remaining 50% at TP2 (2차 익절)
+
+PATH 2 — 손절 경로 (Loss Path):
+  Entry (100%) → price hits SL1 first → exit 50% at SL1 (1차 손절)
+    ├→ price recovers to TP1 → exit remaining 50% at TP1 (1차 익절 회복)
+    └→ price continues to SL2 → exit remaining 50% at SL2 (2차 손절)
+
+PROBABILITY RULES:
+- profitPath.probability + lossPath.probability = 100%
+- Within each path: the two outcome probabilities should sum to the path's total probability
+- Example: profitPath 65% (breakeven 30% + tp2 35%), lossPath 35% (recovery 20% + sl2 15%)
+- All 4 outcome probabilities should sum to ~100%
+
 ## LABEL RULES (CRITICAL):
 - Levels ABOVE entry price → 저항 (resistance): 1차 저항, 2차 저항
 - Levels BELOW entry price → 지지 (support): 1차 지지, 2차 지지
 - For LONG: tp1/tp2 are above entry → "1차 저항", "2차 저항"; sl1/sl2 are below → "1차 지지", "2차 지지"
 - For SHORT: tp1/tp2 are below entry → "1차 지지", "2차 지지"; sl1/sl2 are above → "1차 저항", "2차 저항"
-- In scenario flows, use these SAME labels (저항/지지) instead of 참고구간/손절구간
+- In the PRICE LEVELS section, use 저항/지지 labels
+- In the SCENARIO FLOWS, use 익절/손절/본전 labels (these describe trading actions)
 
 COMPLEX MODE RULES:
 - ALL prices must be expressed as zones (low/high), NOT single numbers
 - Zone width: ~0.5~1.5% of price for crypto, ~0.3~0.8% for stocks
-- 4 scenarios must be provided (best / partial_win / partial_loss / worst)
-- Probabilities should sum to ~100%
 - For LONG: tp1Zone < tp2Zone (both above current), sl1Zone > sl2Zone (both below current)
 - For SHORT: tp1Zone > tp2Zone (both below current), sl1Zone < sl2Zone (both above current)
-- Each scenario uses 50%/50% split positions. Use midpoint of each zone for flow prices.
-- If direction is HOLD: set levels to null, scenarios to empty array.
+- Use midpoint of each zone for scenario flow prices.
+- If direction is HOLD: set levels to null, scenarios to null.
 - NEVER use TSI/RSI/ICT/OB/FVG/BOS in user-facing text — use abstract Korean terms only`;
 
 // ── Indicator calculations ──
