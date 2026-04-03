@@ -184,29 +184,32 @@ input,select{font-family:inherit;outline:none}
 .exit-row:last-child{margin-bottom:0}
 .exit-row strong{color:var(--text);font-weight:500;min-width:70px;flex-shrink:0}
 
-/* Scenario cards */
-.scenarios-wrap{display:grid;gap:8px}
-.scenario-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;position:relative}
-.scenario-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:var(--r) 0 0 var(--r)}
-.scenario-best::before{background:var(--green)}
-.scenario-partial-win::before{background:var(--blue)}
-.scenario-partial-loss::before{background:var(--yellow)}
-.scenario-worst::before{background:var(--red)}
-.scenario-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-.scenario-label{font-family:var(--mono);font-weight:700;font-size:.85rem}
-.scenario-best .scenario-label{color:var(--green)}
-.scenario-partial-win .scenario-label{color:var(--blue)}
-.scenario-partial-loss .scenario-label{color:var(--yellow)}
-.scenario-worst .scenario-label{color:var(--red)}
-.scenario-prob{font-size:.75rem;color:var(--muted);font-family:var(--mono);margin-left:auto}
-.scenario-flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+/* Scenario branch cards */
+.scenarios-wrap{display:grid;gap:10px}
+.branch-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;position:relative}
+.branch-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:var(--r) 0 0 var(--r)}
+.branch-profit::before{background:var(--green)}
+.branch-loss::before{background:var(--red)}
+.branch-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.branch-title{font-family:var(--mono);font-weight:700;font-size:.85rem}
+.branch-profit .branch-title{color:var(--green)}
+.branch-loss .branch-title{color:var(--red)}
+.branch-total-prob{font-size:.75rem;color:var(--muted);font-family:var(--mono);margin-left:auto}
+.branch-trunk{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 .flow-step{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:4px;font-size:.8rem;font-family:var(--mono);font-weight:500}
 .flow-entry{background:rgba(59,130,246,.15);color:var(--blue)}
 .flow-tp{background:rgba(34,197,94,.15);color:var(--green)}
 .flow-sl{background:rgba(239,68,68,.15);color:var(--red)}
+.flow-be{background:rgba(234,179,8,.15);color:var(--yellow)}
 .flow-arrow{color:var(--muted);font-size:.7rem}
 .flow-pct{font-size:.65rem;color:var(--muted);margin-left:2px}
-.scenario-desc{font-size:.8rem;color:var(--text2);padding-top:6px;border-top:1px solid var(--border)}
+.branch-outcomes{margin-left:20px;border-left:2px dashed var(--border);padding-left:0}
+.branch-outcome{display:flex;align-items:center;gap:6px;padding:8px 0 8px 14px;position:relative;flex-wrap:wrap}
+.branch-outcome::before{content:'';position:absolute;left:0;top:50%;width:14px;height:0;border-top:2px dashed var(--border)}
+.branch-outcome:last-child .branch-vline{display:none}
+.branch-outcome-step{display:flex;align-items:center;gap:6px}
+.branch-outcome-prob{font-size:.7rem;color:var(--muted);font-family:var(--mono);margin-left:auto;flex-shrink:0}
+.branch-outcome-desc{width:100%;font-size:.75rem;color:var(--text2);padding-left:0;margin-top:2px}
 
 /* Comment */
 .result-comment{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;font-size:.9rem;color:var(--text2);line-height:1.6}
@@ -237,7 +240,9 @@ input,select{font-family:inherit;outline:none}
   .result-panel{padding:12px}#chartContainer{height:45vh;min-height:280px}
   .levels-grid{grid-template-columns:repeat(3,1fr)}
   .ctrl-input{width:140px}
-  .scenario-flow{gap:4px}
+  .branch-trunk{gap:4px}
+  .branch-outcomes{margin-left:10px}
+  .branch-outcome{padding:6px 0 6px 10px}
   .mode-cards{grid-template-columns:1fr}
   .direction-card{flex-direction:column;text-align:center;gap:10px}
   .search-dropdown{min-width:280px}
@@ -969,37 +974,101 @@ function displayEntrySection(data, isStrategic) {
 function displayScenarios(data) {
   const wrap = document.getElementById('scenariosWrap');
   wrap.innerHTML = '';
-  if (!data.scenarios || data.scenarios.length === 0) return;
 
-  data.scenarios.forEach(sc => {
-    const typeClass = {
-      'best': 'scenario-best', 'partial_win': 'scenario-partial-win',
-      'partial_loss': 'scenario-partial-loss', 'worst': 'scenario-worst'
-    }[sc.type] || 'scenario-best';
+  // Handle new branching format
+  if (data.scenarios && data.scenarios.profitPath && data.scenarios.lossPath) {
+    const entryPrice = data.currentPrice || (allCandles.length > 0 ? allCandles[allCandles.length - 1].close : null);
 
-    let flowHTML = '';
-    if (sc.flow && sc.flow.length > 0) {
-      flowHTML = '<div class="scenario-flow">';
-      sc.flow.forEach((step, i) => {
-        if (i > 0) flowHTML += '<span class="flow-arrow">→</span>';
-        const stepClass = step.type === 'entry' ? 'flow-entry' : step.type === 'tp' ? 'flow-tp' : 'flow-sl';
-        flowHTML += `<span class="flow-step ${stepClass}">${step.label} ${fmt(step.price)}<span class="flow-pct">${step.pct || ''}</span></span>`;
-      });
-      flowHTML += '</div>';
-    }
+    // Render profit path
+    const profitPath = data.scenarios.profitPath;
+    wrap.appendChild(createBranchCard(profitPath, entryPrice, 'branch-profit'));
 
-    const card = document.createElement('div');
-    card.className = `scenario-card ${typeClass}`;
-    card.innerHTML = `
-      <div class="scenario-header">
-        <span class="scenario-label">${sc.name}</span>
-        <span class="scenario-prob">${sc.probability || ''}</span>
-      </div>
-      ${flowHTML}
-      ${sc.description ? `<div class="scenario-desc">${sc.description}</div>` : ''}
-    `;
-    wrap.appendChild(card);
-  });
+    // Render loss path
+    const lossPath = data.scenarios.lossPath;
+    wrap.appendChild(createBranchCard(lossPath, entryPrice, 'branch-loss'));
+    return;
+  }
+
+  // Fallback: handle old array format for backward compatibility
+  if (Array.isArray(data.scenarios)) {
+    data.scenarios.forEach(sc => {
+      const typeClass = {
+        'best': 'branch-profit', 'partial_win': 'branch-profit',
+        'partial_loss': 'branch-loss', 'worst': 'branch-loss'
+      }[sc.type] || 'branch-profit';
+
+      let flowHTML = '';
+      if (sc.flow && sc.flow.length > 0) {
+        flowHTML = '<div class="branch-trunk">';
+        sc.flow.forEach((step, i) => {
+          if (i > 0) flowHTML += '<span class="flow-arrow">→</span>';
+          const stepClass = step.type === 'entry' ? 'flow-entry' : step.type === 'tp' ? 'flow-tp' : 'flow-sl';
+          flowHTML += `<span class="flow-step ${stepClass}">${step.label} ${fmt(step.price)}<span class="flow-pct">${step.pct || ''}</span></span>`;
+        });
+        flowHTML += '</div>';
+      }
+
+      const card = document.createElement('div');
+      card.className = `branch-card ${typeClass}`;
+      card.innerHTML = `
+        <div class="branch-header">
+          <span class="branch-title">${sc.name}</span>
+          <span class="branch-total-prob">${sc.probability || ''}</span>
+        </div>
+        ${flowHTML}
+        ${sc.description ? `<div style="font-size:.78rem;color:var(--text2);padding-top:6px;border-top:1px solid var(--border)">${sc.description}</div>` : ''}
+      `;
+      wrap.appendChild(card);
+    });
+  }
+}
+
+function createBranchCard(path, entryPrice, cssClass) {
+  const card = document.createElement('div');
+  card.className = `branch-card ${cssClass}`;
+
+  const trigger = path.trigger || {};
+  const triggerClass = trigger.label && trigger.label.includes('손절') ? 'flow-sl' : 'flow-tp';
+
+  // Build trunk: [Trigger] only (no entry step)
+  let trunkHTML = `
+    <div class="branch-trunk">
+      <span class="flow-step ${triggerClass}">${trigger.label || ''} ${fmt(trigger.price)} <span class="flow-pct">${trigger.pct || '(50%)'}</span></span>
+    </div>
+  `;
+
+  // Build outcomes branch
+  let outcomesHTML = '<div class="branch-outcomes">';
+  if (path.outcomes && path.outcomes.length > 0) {
+    path.outcomes.forEach(outcome => {
+      const step = outcome.step || {};
+      let stepClass = 'flow-tp';
+      if (outcome.type === 'sl') stepClass = 'flow-sl';
+      else if (outcome.type === 'breakeven') stepClass = 'flow-be';
+
+      outcomesHTML += `
+        <div class="branch-outcome">
+          <div class="branch-outcome-step">
+            <span class="flow-step ${stepClass}">${step.label || ''} ${fmt(step.price)} <span class="flow-pct">${step.pct || '(50%)'}</span></span>
+          </div>
+          <span class="branch-outcome-prob">${outcome.probability || ''}</span>
+          ${outcome.description ? `<div class="branch-outcome-desc">${outcome.description}</div>` : ''}
+        </div>
+      `;
+    });
+  }
+  outcomesHTML += '</div>';
+
+  card.innerHTML = `
+    <div class="branch-header">
+      <span class="branch-title">${path.name || ''}</span>
+      <span class="branch-total-prob">${path.probability || ''}</span>
+    </div>
+    ${trunkHTML}
+    ${outcomesHTML}
+  `;
+
+  return card;
 }
 
 function displayExitStrategy(data) {
