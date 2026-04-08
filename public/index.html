@@ -1093,9 +1093,9 @@ function displaySummary(summary) {
   document.getElementById('sectionSummary').style.display = 'block';
   const items = [
     { key: 'trend', name: '추세 방향' },
-    { key: 'momentum', name: '모멘텀' },
-    { key: 'strength', name: '거래 강도' },
-    { key: 'zone', name: '수요·공급 구간' }
+    { key: 'volatility', name: '변동성' },
+    { key: 'fairValue', name: '거래 기준선' },
+    { key: 'confluence', name: '종합 판단' }
   ];
   items.forEach(item => {
     const d = summary[item.key];
